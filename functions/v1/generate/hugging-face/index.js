@@ -94,7 +94,7 @@ export async function onRequest({ request, params, env }) {
     // ----  EdgeOne version: rate-limit by IP + device fingerprint ----
     const MAX_REQUESTS = 10;
 
-    const userKey = `${eo.clientIp}__${eo.uuid}`;
+    const userKey = `${eo.clientIp}`;
 
     try {
       const kv = image_generage_cnt; // KV binding defined in pages.toml / dashboard

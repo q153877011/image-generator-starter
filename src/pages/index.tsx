@@ -220,7 +220,7 @@ export default function Home() {
              {/* Text Input Card */}
              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-6">
                <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">
-                 Image description
+                 Image Description
                </h2>
                
                <form onSubmit={handleSubmit} className="space-y-4">
