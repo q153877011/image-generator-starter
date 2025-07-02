@@ -87,8 +87,7 @@ export default function ModelDropdown({ models, selected, onSelect, disabled }: 
         Please visit <span className="font-semibold">EdgeOne Pages</span> to&nbsp;
         <a href="https://edgeone.ai/pages/new?from=template&template=image-generator-starter" target="_blank" className="text-blue-600 font-semibold">deploy</a>
         &nbsp;your website and explore enhanced features (activation of the image generation functionality requires visiting&nbsp;
-        <a href="https://huggingface.co/models" target="_blank" className="text-blue-600 font-semibold">Hugging Face</a>
-        ).
+        <a href="https://huggingface.co/models" target="_blank" className="text-blue-600 font-semibold">Hugging Face</a> and <a href="https://studio.nebius.com/?modality=text2image" target="_blank" className="text-blue-600 font-semibold">Nebius</a>).
       </Dialog>
     </div>
   );

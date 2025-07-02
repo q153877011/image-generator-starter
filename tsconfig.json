@@ -17,6 +17,6 @@
       "@/*": ["./src/*"]
     }
   },
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", "src/functions/v1/generate/index.js"],
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", "src/functions/v1/generate/index.js", "functions/v1/token-status/token-status.js"],
   "exclude": ["node_modules"]
 }

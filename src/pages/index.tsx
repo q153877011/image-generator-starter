@@ -1,5 +1,5 @@
 import Image from "next/image";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { Geist, Geist_Mono } from "next/font/google";
 import ModelDropdown from "../components/ModelDropdown";
 
@@ -27,28 +27,87 @@ interface GeneratedImage {
 const platform = {
   id: 'huggingface',
   name: 'Hugging Face',
-  models: [
-    { id: 'blackflux', name: 'black-forest-labs/flux-schnell', value: "black-forest-labs/flux-schnell" },
-    { id: 'sdxl', name: 'stabilityai/stable-diffusion-xl-base-1.0', value: "stability-ai/sdxl", disabled: true},
-    { id: 'blackflux1', name: 'black-forest-labs/FLUX.1-dev', value: "black-forest-labs/flux-dev", disabled: true},
-    { id: 'pixelxl', name: 'nerijs/pixel-art-xl', value: "nerijs/pixel-art-xl", disabled: true},
-    { id: 'hidreamfull1', name: 'HiDream-ai/HiDream-I1-Full', value: "HiDream-ai/HiDream-I1-Full", disabled: true},
-    { id: 'btsd', name: 'ByteDance/Hyper-SD', value: "ByteDance/Hyper-SD", disabled: true },
-    { id: 'sdxl-turbo', name: 'stabilityai/sdxl-turbo', value: "stabilityai/sdxl-turbo", disabled: true},
-  ]
 };
+
+// Base model definitions
+const baseModels = [
+  { id: 'blackschnell', name: 'black-forest-labs/flux-schnell', value: "black-forest-labs/flux-schnell", platform: 'nebius' },
+  { id: 'sdxl', name: 'stabilityai/stable-diffusion-xl-base-1.0', value: "stability-ai/sdxl",  platform: 'nebius'},
+  { id: 'blackdev', name: 'black-forest-labs/flux-dev', value: "black-forest-labs/flux-dev", platform: 'nebius', disabled: true},
+  { id: 'pixelxl', name: 'nerijs/pixel-art-xl', value: "nerijs/pixel-art-xl", platform: 'huggingface', disabled: true},
+  { id: 'hidreamfull1', name: 'HiDream-ai/HiDream-I1-Full', value: "HiDream-ai/HiDream-I1-Full", platform: 'huggingface', disabled: true},
+  { id: 'btsd', name: 'ByteDance/Hyper-SD', value: "ByteDance/Hyper-SD", disabled: true, platform: 'huggingface' },
+  { id: 'sdxl-turbo', name: 'stabilityai/sdxl-turbo', value: "stabilityai/sdxl-turbo", disabled: true, platform: 'huggingface'},
+];
 
 export default function Home() {
   const [inputValue, setInputValue] = useState('');
   const [generatedImages, setGeneratedImages] = useState<GeneratedImage[]>([]);
-  const [selectedModel, setSelectedModel] = useState<string>('sdxl');
+  const [selectedModel, setSelectedModel] = useState<string>('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [isClient, setIsClient] = useState(false);
+  const [displayPlatformName, setDisplayPlatformName] = useState<string>('Hugging Face');
+
+  // Token availability states (default false, updated after API call)
+  const [hasHfToken, setHasHfToken] = useState<boolean>(false);
+  const [hasNebiusToken, setHasNebiusToken] = useState<boolean>(false);
+  const disabledList = ['pixelxl', 'hidreamfull1', 'btsd', 'sdxl-turbo'];
+
+  // Fetch token presence once on mount
+  useEffect(() => {
+    fetch('/v1/token-status')
+      .then(async (res) => {
+        try {
+          if (!res.ok) {
+            throw new Error(`HTTP ${res.status}`);
+          }
+          const contentType = res.headers.get('content-type') || '';
+          if (!contentType.includes('application/json')) {
+            throw new Error('Unexpected content type');
+          }
+          return await res.json();
+        } catch (err) {
+          console.warn('token-status response is not valid JSON:', err);
+          return { hfToken: false, nebiusToken: false };
+        }
+      })
+      .then((data: { hfToken?: boolean; nebiusToken?: boolean }) => {
+        setHasHfToken(Boolean(data?.hfToken));
+        setHasNebiusToken(Boolean(data?.nebiusToken));
+      })
+      .catch((err) => {
+        console.error('Failed to fetch token status:', err);
+      });
+  }, []);
+
+  const models = useMemo(() => {
+    return baseModels.map((m) => {
+      let disabled = m.disabled ?? false;
+   
+      if (m.platform === 'huggingface') {
+        disabled = !hasHfToken;
+      }
+      if (m.platform === 'nebius') {
+        disabled = !hasNebiusToken;
+      }
+      // Always disable if in disabledList
+      if (disabledList.includes(m.id)) {
+        disabled = true;
+      }
+      return { ...m, disabled };
+    });
+  }, [hasHfToken, hasNebiusToken]);
 
   useEffect(() => {
     setIsClient(true);
   }, []);
+
+  // Update display platform when selected model changes
+  useEffect(() => {
+    const modelInfo = models.find((m) => m.id === selectedModel);
+    setDisplayPlatformName(modelInfo?.platform === 'nebius' ? 'Nebius' : 'Hugging Face');
+  }, [selectedModel]);
 
   // Generation timer
   useEffect(() => {
@@ -69,19 +128,40 @@ export default function Home() {
     };
   }, [isGenerating]);
 
+  // Ensure selectedModel stays in sync with enabled models
+  useEffect(() => {
+    const enabledModels = models.filter((m) => !m.disabled);
+    if (enabledModels.length === 0) {
+      setSelectedModel('');
+    } else {
+      // If current selection is disabled or empty, pick first enabled
+      const isCurrentValid = enabledModels.some((m) => m.id === selectedModel);
+      if (!isCurrentValid) {
+        setSelectedModel(enabledModels[0].id);
+      }
+    }
+  }, [models]);
+
   const generateImages = async (prompt: string) => {
     if (!prompt.trim() || isGenerating) return;
 
     setIsGenerating(true);
     
     // Get currently selected model info
-    const modelInfo = platform.models.find(m => m.id === selectedModel);
+    const modelInfo = models.find(m => m.id === selectedModel && !m.disabled);
     
+    if (!modelInfo) {
+      // No valid model available
+      setGeneratedImages([{ id:`${Date.now()}`, platform:'', model:'', prompt:prompt, imageUrl:'', timestamp:new Date(), error:'No model available', isLoading:false }]);
+      setIsGenerating(false);
+      return;
+    }
+
     // Create a loading placeholder record
     const loadingImage = {
       id: `${Date.now()}-${platform.id}`,
-      platform: platform.name,
-      model: modelInfo?.name || platform.models[0].name,
+      platform: displayPlatformName,
+      model: modelInfo.name,
       prompt: prompt,
       imageUrl: '',
       timestamp: new Date(),
@@ -92,15 +172,15 @@ export default function Home() {
 
     try {
       // Call backend API to generate image
-      const res = await fetch('/v1/generate/hugging-face', {
+      const res = await fetch('/v1/generate', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          image: `${prompt} (${modelInfo?.name} style)`,
+          image: `${prompt} (${modelInfo.name} style)`,
           platform: platform.id,
-          model: modelInfo?.value || selectedModel,
+          model: modelInfo.value || selectedModel,
         })
       });
 
@@ -140,7 +220,7 @@ export default function Home() {
       }
 
     } catch (error) {
-      console.error(`${platform.name} generation failed:`, error);
+      console.error(`${displayPlatformName} generation failed:`, error);
       
       // When generation fails, show an error card
       setGeneratedImages([{
@@ -240,7 +320,7 @@ export default function Home() {
                    
                    <button
                      type="submit"
-                     disabled={!inputValue.trim() || isGenerating}
+                     disabled={!inputValue.trim() || isGenerating || !selectedModel}
                      className="px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 disabled:from-gray-300 disabled:to-gray-300 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-all duration-200 flex items-center space-x-2 shadow-lg hover:shadow-xl"
                    >
                      {isGenerating ? (
@@ -288,13 +368,13 @@ export default function Home() {
                <div className="space-y-4">
                  <div className="space-y-2">
                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                     {platform.name}
+                     {displayPlatformName}
                    </label>
                    <ModelDropdown
-                     models={platform.models}
+                     models={models}
                      selected={selectedModel}
                      onSelect={setSelectedModel}
-                     disabled={isGenerating}
+                     disabled={isGenerating || models.filter(m=>!m.disabled).length===0}
                    />
                  </div>
                </div>
@@ -349,7 +429,7 @@ export default function Home() {
                            <>
                              <Image
                                src={generatedImages[0].imageUrl}
-                               alt={`${platform.name} generated image`}
+                               alt={`${displayPlatformName} generated image`}
                                fill
                                className="object-cover"
                                sizes="(max-width: 768px) 100vw, 50vw"
@@ -358,7 +438,7 @@ export default function Home() {
                              {/* Download button */}
                              <a
                                href={generatedImages[0].imageUrl}
-                               download={`${generatedImages[0].prompt?.slice(0, 10) || 'image'}.png`}
+                               download={`${(generatedImages[0]?.prompt || 'image').slice(0, 10).trim().replace(/\s+/g, '-')}.png`}
                                className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity"
                                aria-label="下载图片"
                              >
@@ -395,7 +475,7 @@ export default function Home() {
                        {/* Footer / Info Section */}
                        <div className="bg-gray-50 dark:bg-gray-700 px-4 py-3 space-y-1">
                          <h4 className="text-sm font-medium text-gray-900 dark:text-white">
-                           {platform.name}
+                           {generatedImages[0]?.platform || 'Hugging Face'}
                          </h4>
                          <p className="text-xs text-gray-500 dark:text-gray-400">
                           Model used:  {generatedImages[0]?.model || '--'}
@@ -412,8 +492,6 @@ export default function Home() {
            </div>
          </div>
        </main>
-
-
     </div>
   );
 }

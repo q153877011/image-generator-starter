@@ -1,4 +1,4 @@
-async function newbius_query(data, token, url) {
+async function nebius_query(data, token, url) {
   const response = await fetch(
 		url,
 		{
@@ -102,7 +102,7 @@ export async function onRequest({ request, params, env }) {
         const stored = await kv.get(userKey);
         const currentCount = stored ? parseInt(stored, 10) : 0;
         if (currentCount >= MAX_REQUESTS) {
-          return new Response(JSON.stringify({ error: `Request limit (${MAX_REQUESTS}) reached` }), {
+          return new Response(JSON.stringify({ error: `The demo experience is limited to (${MAX_REQUESTS}) generations. For more AI image generation features, please deploy on EdgeOne Pages.` }), {
             status: 429,
             headers: {
               'content-type': 'application/json; charset=UTF-8',
@@ -120,7 +120,7 @@ export async function onRequest({ request, params, env }) {
         globalThis.__rateLimitMap = globalThis.__rateLimitMap || new Map();
         const currentCount = globalThis.__rateLimitMap.get(userKey) || 0;
         if (currentCount >= MAX_REQUESTS) {
-          return new Response(JSON.stringify({ error: `Request limit (${MAX_REQUESTS}) reached` }), {
+          return new Response(JSON.stringify({ error: `The demo experience is limited to (${MAX_REQUESTS}) generations. For more AI image generation features, please deploy on EdgeOne Pages.` }), {
             status: 429,
             headers: {
               'content-type': 'application/json; charset=UTF-8',
@@ -145,25 +145,26 @@ export async function onRequest({ request, params, env }) {
     
     // Use front-end passed model value
     const model = body.model || "stability-ai/sdxl";
-    console.log('token', env.NEWBIUS_TOKEN);
+    console.log('token', env.NEBIUS_TOKEN);
     const handlers = {
-      'black-forest-labs/flux-schnell': () => newbius_query({
+      'black-forest-labs/flux-schnell': () => nebius_query({
         response_format: 'b64_json',
         prompt,
         model,
-      }, env.NEWBIUS_TOKEN, 'https://api.studio.nebius.com/v1/images/generations'),
+      }, env.NEBIUS_TOKEN, 'https://api.studio.nebius.com/v1/images/generations'),
 
-      'stability-ai/sdxl': () => newbius_query({
+      'black-forest-labs/flux-dev': () => nebius_query({
         response_format: 'b64_json',
         prompt,
         model,
-      }, env.HF_TOKEN, 'https://router.huggingface.co/nebius/v1/images/generations'),
+      }, env.NEBIUS_TOKEN, 'https://api.studio.nebius.com/v1/images/generations'),
 
-      'black-forest-labs/flux-dev': () => newbius_query({
+      'stability-ai/sdxl': () => nebius_query({
         response_format: 'b64_json',
         prompt,
         model,
-      }, env.HF_TOKEN, 'https://router.huggingface.co/nebius/v1/images/generations'),
+      }, env.NEBIUS_TOKEN, 'https://api.studio.nebius.com/v1/images/generations'),
+
       'nerijs/pixel-art-xl': () => fal_query({
         prompt,
       }, env.HF_TOKEN, 'https://router.huggingface.co/fal-ai/fal-ai/fast-sdxl'),
