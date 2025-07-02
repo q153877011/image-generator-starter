@@ -1,5 +1,7 @@
 import Image from "next/image";
+import { useState, useRef, useEffect } from "react";
 import { Geist, Geist_Mono } from "next/font/google";
+import ModelDropdown from "../components/ModelDropdown";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -11,105 +13,410 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+interface GeneratedImage {
+  id: string;
+  platform: string;
+  model: string;
+  prompt: string;
+  imageUrl: string;
+  timestamp: Date;
+  isLoading?: boolean;
+  error?: string;
+}
+
+const platform = {
+  id: 'huggingface',
+  name: 'Hugging Face',
+  models: [
+    { id: 'sdxl', name: 'stabilityai/stable-diffusion-xl-base-1.0', value: "stability-ai/sdxl" },
+    { id: 'blackflux1', name: 'black-forest-labs/FLUX.1-dev', value: "black-forest-labs/flux-dev"},
+    { id: 'pixelxl', name: 'nerijs/pixel-art-xl', value: "nerijs/pixel-art-xl", disabled: true},
+    { id: 'hidreamfull1', name: 'HiDream-ai/HiDream-I1-Full', value: "HiDream-ai/HiDream-I1-Full", disabled: true},
+    { id: 'btsd', name: 'ByteDance/Hyper-SD', value: "ByteDance/Hyper-SD", disabled: true },
+    { id: 'sdxl-turbo', name: 'stabilityai/sdxl-turbo', value: "stabilityai/sdxl-turbo", disabled: true},
+  ]
+};
+
 export default function Home() {
+  const [inputValue, setInputValue] = useState('');
+  const [generatedImages, setGeneratedImages] = useState<GeneratedImage[]>([]);
+  const [selectedModel, setSelectedModel] = useState<string>('sdxl');
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
+  // 生成计时器
+  useEffect(() => {
+    let interval: NodeJS.Timeout | null = null;
+    if (isGenerating) {
+      setElapsedSeconds(0);
+      interval = setInterval(() => {
+        setElapsedSeconds((prev) => {
+          const next = Math.round((prev + 0.1) * 10) / 10;
+          return next;
+        });
+      }, 100);
+    } else {
+      setElapsedSeconds(0);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [isGenerating]);
+
+  const generateImages = async (prompt: string) => {
+    if (!prompt.trim() || isGenerating) return;
+
+    setIsGenerating(true);
+    
+    // 获取当前选择的模型信息
+    const modelInfo = platform.models.find(m => m.id === selectedModel);
+    
+    // 创建加载状态的图片条目
+    const loadingImage = {
+      id: `${Date.now()}-${platform.id}`,
+      platform: platform.name,
+      model: modelInfo?.name || platform.models[0].name,
+      prompt: prompt,
+      imageUrl: '',
+      timestamp: new Date(),
+      isLoading: true
+    };
+
+    setGeneratedImages([loadingImage]);
+
+    try {
+      // 调用API生成图片
+      const res = await fetch('http://localhost:8088/v1/generate/hugging-face', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          image: `${prompt} (${modelInfo?.name} style)`,
+          platform: platform.id,
+          model: modelInfo?.value || selectedModel
+        })
+      });
+
+      const data = await res.json();
+      
+      if (!res.ok || data.error) {
+        // API 返回错误
+        setGeneratedImages([
+          {
+            ...loadingImage,
+            imageUrl: '',
+            isLoading: false,
+            error: data.error || `接口错误: ${res.status}`,
+          },
+        ]);
+      } else {
+        let imageUrl = '';
+        if (data.imageBase64) {
+          imageUrl = `data:image/png;base64,${data.imageBase64}`;
+        } else {
+          imageUrl = `https://picsum.photos/512/512?random=${Date.now()}`;
+        }
+
+        setGeneratedImages([
+          {
+            ...loadingImage,
+            imageUrl,
+            isLoading: false,
+            error: undefined,
+          },
+        ]);
+      }
+
+    } catch (error) {
+      console.error(`${platform.name} 生成失败:`, error);
+      
+      // 生成失败时显示错误图片
+      setGeneratedImages([{
+        ...loadingImage,
+        imageUrl: '',
+        error: (error as Error).message || '生成失败',
+        isLoading: false,
+      }]);
+    }
+
+    setIsGenerating(false);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!inputValue.trim()) return;
+
+    await generateImages(inputValue);
+  };
+
+  const examplePrompts = [
+    "一只可爱的橙色小猫在花园里玩耍",
+    "未来主义城市的夜景，霓虹灯闪烁", 
+    "水彩画风格的山水风景画",
+  ];
+
   return (
-    <div
-      className={`${geistSans.className} ${geistMono.className} grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]`}
-    >
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm/6 text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-[family-name:var(--font-geist-mono)] font-semibold">
-              src/pages/index.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+    <div className={`${geistSans.variable} ${geistMono.variable} min-h-screen bg-gray-50 dark:bg-gray-900 font-[family-name:var(--font-geist-sans)]`}>
+      {/* Header / Navbar */}
+      <header className="bg-gray-100 dark:bg-gray-900 shadow-sm border-b border-gray-200 dark:border-gray-700">
+        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+          {/* Brand */}
+          <div className="flex items-center space-x-3">
+            <svg className="w-8 h-8 text-purple-600" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2z" />
+            </svg>
+            <span className="text-gray-800 dark:text-white text-xl font-semibold">AI 图像生成器</span>
+          </div>
+
+          {/* Navigation links */}
+          <nav className="hidden md:flex items-center space-x-6 text-gray-600 dark:text-gray-300 text-sm">
+            <a
+              href="https://github.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-gray-900 dark:hover:text-white transition-colors"
+              aria-label="GitHub Repository"
+            >
+              <svg
+                className="w-6 h-6 fill-current"
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M12 0C5.372 0 0 5.373 0 12c0 5.303 3.438 9.8 8.207 11.387.6.111.793-.262.793-.583 0-.288-.01-1.049-.016-2.058-3.338.726-4.042-1.61-4.042-1.61-.546-1.389-1.333-1.759-1.333-1.759-1.089-.744.083-.729.083-.729 1.205.084 1.84 1.238 1.84 1.238 1.07 1.834 2.809 1.304 3.495.997.108-.775.419-1.305.762-1.605-2.665-.304-5.467-1.332-5.467-5.932 0-1.31.468-2.381 1.235-3.221-.124-.303-.536-1.522.117-3.176 0 0 1.008-.322 3.301 1.23a11.51 11.51 0 013.003-.404c1.02.005 2.046.138 3.003.404 2.291-1.552 3.297-1.23 3.297-1.23.655 1.654.243 2.873.12 3.176.77.84 1.233 1.911 1.233 3.221 0 4.61-2.807 5.625-5.48 5.921.43.372.814 1.102.814 2.222 0 1.604-.015 2.898-.015 3.293 0 .323.19.699.8.58C20.565 21.796 24 17.298 24 12c0-6.627-5.373-12-12-12z"
+                  clipRule="evenodd"
+                />
+              </svg>
+            </a>
+          </nav>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+      </header>
+
+       {/* Main Content Area - Left Right Layout */}
+       <main className="max-w-7xl mx-auto px-4 py-8">
+         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 min-h-[calc(100vh-200px)]">
+           
+           {/* Left Side - Input and Model Selection */}
+           <div className="space-y-6">
+             
+             {/* Text Input Card */}
+             <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-6">
+               <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">
+                 图像描述
+               </h2>
+               
+               <form onSubmit={handleSubmit} className="space-y-4">
+                 <div>
+                   <textarea
+                     value={inputValue}
+                     onChange={(e) => setInputValue(e.target.value)}
+                     placeholder="描述你想要生成的图像，例如：一只可爱的橙色小猫在花园里玩耍..."
+                     className="w-full px-4 py-3 text-lg border-2 border-gray-300 dark:border-gray-600 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 transition-all duration-200"
+                     rows={4}
+                     onKeyDown={(e) => {
+                       if (e.key === 'Enter' && !e.shiftKey) {
+                         e.preventDefault();
+                         handleSubmit(e);
+                       }
+                     }}
+                   />
+                 </div>
+                 
+                 <div className="flex items-center justify-between">
+                   <div className="text-sm text-gray-500 dark:text-gray-400">
+                     按 Enter 生成图像，Shift + Enter 换行
+                   </div>
+                   
+                   <button
+                     type="submit"
+                     disabled={!inputValue.trim() || isGenerating}
+                     className="px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 disabled:from-gray-300 disabled:to-gray-300 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-all duration-200 flex items-center space-x-2 shadow-lg hover:shadow-xl"
+                   >
+                     {isGenerating ? (
+                       <>
+                         <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                         <span>生成中...</span>
+                       </>
+                     ) : (
+                       <>
+                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                         </svg>
+                         <span>生成图像</span>
+                       </>
+                     )}
+                   </button>
+                 </div>
+               </form>
+
+               {/* Example Prompts */}
+               <div className="mt-6">
+                 <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+                   示例提示词：
+                 </h3>
+                 <div className="grid grid-cols-1 gap-2">
+                   {examplePrompts.map((prompt, index) => (
+                     <button
+                       key={index}
+                       onClick={() => setInputValue(prompt)}
+                       className="p-3 text-left text-sm bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg hover:border-purple-300 dark:hover:border-purple-600 hover:bg-purple-50 dark:hover:bg-gray-600 transition-all duration-200 text-gray-700 dark:text-gray-300"
+                     >
+                       {prompt}
+                     </button>
+                   ))}
+                 </div>
+               </div>
+             </div>
+
+             {/* Model Selection Card */}
+             <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-6">
+               <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">
+                 模型选择
+               </h2>
+               
+               <div className="space-y-4">
+                 <div className="space-y-2">
+                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                     {platform.name}
+                   </label>
+                   <ModelDropdown
+                     models={platform.models}
+                     selected={selectedModel}
+                     onSelect={setSelectedModel}
+                     disabled={isGenerating}
+                   />
+                 </div>
+               </div>
+             </div>
+           </div>
+
+           {/* Right Side - Generated Images Display */}
+           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700">
+             
+             {/* Header */}
+             <div className="bg-gradient-to-r from-purple-500 to-pink-500 px-6 py-4 rounded-t-xl">
+               <h2 className="text-lg font-bold text-white">
+                 生成结果
+               </h2>
+               {generatedImages.length > 0 && (
+                 <p className="text-purple-100 text-sm mt-1">
+                   基于提示词: "{generatedImages[0]?.prompt}"
+                 </p>
+               )}
+             </div>
+
+             {/* Content */}
+             <div className="p-6">
+               {isClient && generatedImages.length === 0 ? (
+                 <div className="text-center py-20">
+                   <div className="w-16 h-16 bg-gray-200 dark:bg-gray-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                     <svg className="w-8 h-8 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                     </svg>
+                   </div>
+                   <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+                     等待生成图像
+                   </h3>
+                   <p className="text-gray-500 dark:text-gray-400">
+                     在左侧输入图像描述并选择 Hugging Face 模型，然后点击生成按钮开始创作
+                   </p>
+                 </div>
+               ) : (
+                 <div className="max-w-md mx-auto">
+                   {generatedImages.length > 0 && (
+                     <div className="border border-gray-200 dark:border-gray-600 rounded-lg overflow-hidden">
+                       {/* Platform Header */}
+                       <div className="bg-gray-50 dark:bg-gray-700 px-4 py-3">
+                         <h4 className="text-sm font-medium text-gray-900 dark:text-white">
+                           {platform.name}
+                         </h4>
+                         <p className="text-xs text-gray-500 dark:text-gray-400">
+                           {generatedImages[0]?.model}
+                         </p>
+                       </div>
+                       
+                       {/* Image with hover download */}
+                       <div className="aspect-square relative bg-gray-100 dark:bg-gray-600 group">
+                         {generatedImages[0]?.isLoading ? (
+                           <div className="absolute inset-0 flex items-center justify-center">
+                             <div className="text-center">
+                               <div className="w-8 h-8 border-4 border-purple-500 border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
+                               <p className="text-sm text-gray-600 dark:text-gray-400">生成中 {elapsedSeconds.toFixed(1)}s</p>
+                             </div>
+                           </div>
+                         ) : generatedImages[0]?.imageUrl ? (
+                           <>
+                             <Image
+                               src={generatedImages[0].imageUrl}
+                               alt={`${platform.name} generated image`}
+                               fill
+                               className="object-cover"
+                               sizes="(max-width: 768px) 100vw, 50vw"
+                               unoptimized
+                             />
+                             {/* Download button */}
+                             <a
+                               href={generatedImages[0].imageUrl}
+                               download={`${generatedImages[0].prompt?.slice(0, 10) || 'image'}.png`}
+                               className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity"
+                               aria-label="下载图片"
+                             >
+                               <svg
+                                 className="w-10 h-10 text-white bg-black bg-opacity-60 rounded-full p-2 shadow-lg hover:bg-opacity-80 transition-colors"
+                                 fill="currentColor"
+                                 viewBox="0 0 24 24"
+                               >
+                                 <path d="M12 16l4-5h-3V4h-2v7H8l4 5zm-7 2v2h14v-2H5z" />
+                               </svg>
+                             </a>
+                           </>
+                         ) : generatedImages[0]?.error ? (
+                           <div className="absolute inset-0 flex items-center justify-center">
+                             <div className="text-center text-red-500 px-4">
+                               <svg className="w-12 h-12 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                               </svg>
+                               <p className="text-sm">{generatedImages[0]?.error}</p>
+                             </div>
+                           </div>
+                         ) : (
+                           <div className="absolute inset-0 flex items-center justify-center">
+                             <div className="text-center text-gray-400">
+                               <svg className="w-12 h-12 mx-auto mb-2 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                               </svg>
+                               <p className="text-sm">等待生成</p>
+                             </div>
+                           </div>
+                         )}
+                       </div>
+                       
+                       {/* Footer */}
+                       <div className="bg-gray-50 dark:bg-gray-700 px-4 py-3">
+                         <p className="text-xs text-gray-500 dark:text-gray-400">
+                           生成时间: {isClient && generatedImages[0] ? generatedImages[0].timestamp.toLocaleTimeString() : '--'}
+                         </p>
+                         <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                           使用模型: {generatedImages[0]?.model || '--'}
+                         </p>
+                       </div>
+                     </div>
+                   )}
+                 </div>
+               )}
+             </div>
+           </div>
+         </div>
+       </main>
+
+
     </div>
   );
 }
