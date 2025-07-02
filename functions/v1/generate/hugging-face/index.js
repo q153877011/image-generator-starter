@@ -68,6 +68,7 @@ async function fal_query(data, token, url) {
 }
 
 export async function onRequest({ request, params, env }) {
+  const eo = request.eo;
   if (request.method === 'OPTIONS') {
     return new Response(null, {
       headers: {
@@ -93,21 +94,8 @@ export async function onRequest({ request, params, env }) {
     // ----  新增：EdgeOne 版 IP + 设备指纹 限流 ----
     const MAX_REQUESTS = 10;
 
-    // EdgeOne 回源会带 x-forwarded-for（形如 1.2.3.4, proxyip...），或 x-real-ip
-    function getClientIp(req) {
-      const xff = req.headers.get('x-forwarded-for');
-      if (xff) return xff.split(',')[0].trim();
-      const xReal = req.headers.get('x-real-ip');
-      if (xReal) return xReal;
-      return 'unknown';
-    }
 
-    const clientIp = getClientIp(request);
-
-    // 从请求体或 header 中获取设备指纹（前端需主动发送）
-    const deviceFingerprint = body.fingerprint || request.headers.get('x-device-fingerprint') || '';
-
-    const userKey = `${clientIp}__${deviceFingerprint}`;
+    const userKey = `${eo.clientIp}__${eo.uuid}`;
 
     try {
       const kv = image_generage_cnt; // 在 pages.toml／控制台中绑定 KV
