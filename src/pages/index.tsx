@@ -28,6 +28,7 @@ const platform = {
   id: 'huggingface',
   name: 'Hugging Face',
   models: [
+    { id: 'blackflux', name: 'black-forest-labs/flux-schnell', value: "black-forest-labs/flux-schnell" },
     { id: 'sdxl', name: 'stabilityai/stable-diffusion-xl-base-1.0', value: "stability-ai/sdxl" },
     { id: 'blackflux1', name: 'black-forest-labs/FLUX.1-dev', value: "black-forest-labs/flux-dev"},
     { id: 'pixelxl', name: 'nerijs/pixel-art-xl', value: "nerijs/pixel-art-xl", disabled: true},
@@ -90,29 +91,16 @@ export default function Home() {
     setGeneratedImages([loadingImage]);
 
     try {
-      // Generate or retrieve device fingerprint (stored in localStorage for consistency)
-      const fingerprint = (() => {
-        if (typeof window === 'undefined') return '';
-        let fp = localStorage.getItem('device_fp');
-        if (!fp) {
-          fp = (crypto.randomUUID?.() || Math.random().toString(36).slice(2) + Date.now().toString(36));
-          localStorage.setItem('device_fp', fp);
-        }
-        return fp;
-      })();
-
       // Call backend API to generate image
       const res = await fetch('/v1/generate/hugging-face', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-device-fingerprint': fingerprint,
         },
         body: JSON.stringify({
           image: `${prompt} (${modelInfo?.name} style)`,
           platform: platform.id,
           model: modelInfo?.value || selectedModel,
-          fingerprint,
         })
       });
 
@@ -129,21 +117,26 @@ export default function Home() {
           },
         ]);
       } else {
-        let imageUrl = '';
         if (data.imageBase64) {
-          imageUrl = `data:image/png;base64,${data.imageBase64}`;
+          setGeneratedImages([
+            {
+              ...loadingImage,
+              imageUrl: `data:image/png;base64,${data.imageBase64}`,
+              isLoading: false,
+              error: undefined,
+            },
+          ]);
         } else {
-          imageUrl = `https://picsum.photos/512/512?random=${Date.now()}`;
+          // No image data returned; treat as an error instead of showing a random placeholder
+          setGeneratedImages([
+            {
+              ...loadingImage,
+              imageUrl: '',
+              isLoading: false,
+              error: data.error || 'No image was returned by the API',
+            },
+          ]);
         }
-
-        setGeneratedImages([
-          {
-            ...loadingImage,
-            imageUrl,
-            isLoading: false,
-            error: undefined,
-          },
-        ]);
       }
 
     } catch (error) {
@@ -309,7 +302,7 @@ export default function Home() {
            </div>
 
            {/* Right Side - Generated Images Display */}
-           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700">
+           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 flex flex-col h-full">
              
              {/* Header */}
              <div className="bg-gradient-to-r from-purple-500 to-pink-500 px-6 py-4 rounded-t-xl">
@@ -324,7 +317,7 @@ export default function Home() {
              </div>
 
              {/* Content */}
-             <div className="p-6">
+             <div className="flex-1 p-0">
                {isClient && generatedImages.length === 0 ? (
                  <div className="text-center py-20">
                     <div className="w-16 h-16 bg-gray-200 dark:bg-gray-600 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -340,21 +333,11 @@ export default function Home() {
                   </p>
                  </div>
                ) : (
-                 <div className="max-w-md mx-auto">
+                 <div className="w-full h-full">
                    {generatedImages.length > 0 && (
-                     <div className="border border-gray-200 dark:border-gray-600 rounded-lg overflow-hidden">
-                       {/* Platform Header */}
-                       <div className="bg-gray-50 dark:bg-gray-700 px-4 py-3">
-                         <h4 className="text-sm font-medium text-gray-900 dark:text-white">
-                           {platform.name}
-                         </h4>
-                         <p className="text-xs text-gray-500 dark:text-gray-400">
-                           {generatedImages[0]?.model}
-                         </p>
-                       </div>
-                       
+                     <div className="overflow-hidden flex flex-col h-full">
                        {/* Image with hover download */}
-                       <div className="aspect-square relative bg-gray-100 dark:bg-gray-600 group">
+                       <div className="relative bg-gray-100 dark:bg-gray-600 group flex-1">
                          {generatedImages[0]?.isLoading ? (
                            <div className="absolute inset-0 flex items-center justify-center">
                              <div className="text-center">
@@ -409,13 +392,16 @@ export default function Home() {
                          )}
                        </div>
                        
-                       {/* Footer */}
-                       <div className="bg-gray-50 dark:bg-gray-700 px-4 py-3">
+                       {/* Footer / Info Section */}
+                       <div className="bg-gray-50 dark:bg-gray-700 px-4 py-3 space-y-1">
+                         <h4 className="text-sm font-medium text-gray-900 dark:text-white">
+                           {platform.name}
+                         </h4>
                          <p className="text-xs text-gray-500 dark:text-gray-400">
-                           生成时间: {isClient && generatedImages[0] ? generatedImages[0].timestamp.toLocaleTimeString() : '--'}
+                          Model used:  {generatedImages[0]?.model || '--'}
                          </p>
-                         <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                           使用模型: {generatedImages[0]?.model || '--'}
+                         <p className="text-xs text-gray-500 dark:text-gray-400">
+                          Generation time: {isClient && generatedImages[0] ? generatedImages[0].timestamp.toLocaleTimeString() : '--'}
                          </p>
                        </div>
                      </div>

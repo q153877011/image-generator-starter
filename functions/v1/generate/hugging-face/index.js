@@ -145,8 +145,14 @@ export async function onRequest({ request, params, env }) {
     
     // Use front-end passed model value
     const model = body.model || "stability-ai/sdxl";
-    
+    console.log('token', env.NEWBIUS_TOKEN);
     const handlers = {
+      'black-forest-labs/flux-schnell': () => newbius_query({
+        response_format: 'b64_json',
+        prompt,
+        model,
+      }, env.NEWBIUS_TOKEN, 'https://api.studio.nebius.com/v1/images/generations'),
+
       'stability-ai/sdxl': () => newbius_query({
         response_format: 'b64_json',
         prompt,
