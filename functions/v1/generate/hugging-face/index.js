@@ -13,10 +13,10 @@ async function newbius_query(data, token, url) {
   
 	if (!response.ok) {
 		const errorText = await response.text();
-		throw new Error(`API请求失败: ${response.status} ${response.statusText} - ${errorText}`);
+		throw new Error(`API request failed: ${response.status} ${response.statusText} - ${errorText}`);
 	}
 	
-	// 解析 JSON 结果
+	// Parse JSON result
 	const result = await response.json();
 	return result;
 }
@@ -36,10 +36,10 @@ async function replicate_query(data, token, url) {
   
 	if (!response.ok) {
 		const errorText = await response.text();
-		throw new Error(`API请求失败: ${response.status} ${response.statusText} - ${errorText}`);
+		throw new Error(`API request failed: ${response.status} ${response.statusText} - ${errorText}`);
 	}
 	
-	// 解析 JSON 结果
+	// Parse JSON result
 	const result = await response.json();
 	return result;
 }
@@ -59,10 +59,10 @@ async function fal_query(data, token, url) {
   
 	if (!response.ok) {
 		const errorText = await response.text();
-		throw new Error(`API请求失败: ${response.status} ${response.statusText} - ${errorText}`);
+		throw new Error(`API request failed: ${response.status} ${response.statusText} - ${errorText}`);
 	}
 	
-	// 解析 JSON 结果
+	// Parse JSON result
 	const result = await response.json();
 	return result;
 }
@@ -80,30 +80,29 @@ export async function onRequest({ request, params, env }) {
     });
   }
   try {
-    // 仅在 POST 且 Content-Type 为 application/json 时解析 JSON
+    // Only parse JSON when method is POST and Content-Type is application/json
     let body = {};
     if (request.method === 'POST' && request.headers.get('content-type')?.includes('application/json')) {
       try {
         body = await request.json();
       } catch (parseErr) {
-        throw new Error('请求体 JSON 解析失败', parseErr);
+        throw new Error('Failed to parse request JSON', parseErr);
       }
     }
-    console.log('接收到的请求:', body);
+    console.log('Incoming request:', body);
     
-    // ----  新增：EdgeOne 版 IP + 设备指纹 限流 ----
+    // ----  EdgeOne version: rate-limit by IP + device fingerprint ----
     const MAX_REQUESTS = 10;
-
 
     const userKey = `${eo.clientIp}__${eo.uuid}`;
 
     try {
-      const kv = image_generage_cnt; // 在 pages.toml／控制台中绑定 KV
+      const kv = image_generage_cnt; // KV binding defined in pages.toml / dashboard
       if (kv) {
         const stored = await kv.get(userKey);
         const currentCount = stored ? parseInt(stored, 10) : 0;
         if (currentCount >= MAX_REQUESTS) {
-          return new Response(JSON.stringify({ error: `请求次数已达到上限（${MAX_REQUESTS}）` }), {
+          return new Response(JSON.stringify({ error: `Request limit (${MAX_REQUESTS}) reached` }), {
             status: 429,
             headers: {
               'content-type': 'application/json; charset=UTF-8',
@@ -111,17 +110,17 @@ export async function onRequest({ request, params, env }) {
             },
           });
         }
-        // 计数 +1，并设置 24 小时 TTL，防止 KV 无限增长
+        // Increment count and set 24-hour TTL to avoid unlimited growth
         await image_generage_cnt.put(userKey, String(currentCount + 1));
       } else {
         if(!image_generage_cnt) {
-          throw new Error('image_generage_cnt 未设置');
+          throw new Error('image_generage_cnt KV binding is not configured');
         }
-        // 如果没有 KV 绑定，则使用内存 Map 作为回退（仅适用于单实例，随 Worker 冷启会清空）
+        // If KV is not bound, fall back to in-memory Map (single instance, resets on cold start)
         globalThis.__rateLimitMap = globalThis.__rateLimitMap || new Map();
         const currentCount = globalThis.__rateLimitMap.get(userKey) || 0;
         if (currentCount >= MAX_REQUESTS) {
-          return new Response(JSON.stringify({ error: `请求次数已达到上限（${MAX_REQUESTS}）` }), {
+          return new Response(JSON.stringify({ error: `Request limit (${MAX_REQUESTS}) reached` }), {
             status: 429,
             headers: {
               'content-type': 'application/json; charset=UTF-8',
@@ -134,17 +133,17 @@ export async function onRequest({ request, params, env }) {
     } catch (rateErr) {
       console.warn('请求计数更新失败:', rateErr);
     }
-    // ----  限流结束  ----
+    // ----  Rate-limit section end  ----
     
-    // 检查环境变量
+    // Check environment variable
     if (!env.HF_TOKEN) {
-      throw new Error('HF_TOKEN 环境变量未设置');
+      throw new Error('HF_TOKEN environment variable is not set');
     }
 
-    // 从请求中获取用户输入的图像描述
+    // Get prompt text from request
     const prompt = body.image || "一幅美丽的风景画";
     
-    // 使用前端传来的模型 value
+    // Use front-end passed model value
     const model = body.model || "stability-ai/sdxl";
     
     const handlers = {
@@ -175,17 +174,17 @@ export async function onRequest({ request, params, env }) {
 
     const handler = handlers[model];
     if (!handler) {
-      throw new Error(`不支持的模型: ${model}`);
+      throw new Error(`Unsupported model: ${model}`);
     }
 
     const result = await handler();
         
-    // 返回包含base64图片的响应
+    // Return response with base64 image
     return new Response(JSON.stringify({
       success: true,
       prompt: prompt,
-      imageBase64: result.data?.[0]?.b64_json || result.b64_json, // 不同API可能返回格式不同
-      message: '图像生成成功'
+      imageBase64: result.data?.[0]?.b64_json || result.b64_json, // Different APIs may return different formats
+      message: 'Image generated successfully'
     }), {
       headers: {
         'content-type': 'application/json; charset=UTF-8',
@@ -193,7 +192,7 @@ export async function onRequest({ request, params, env }) {
       },
     });
   } catch (err) {
-    console.error('图像生成错误')
+    console.error('Image generation error')
     console.error(err)
     return new Response(JSON.stringify({ error: err.message }), {
       headers: {

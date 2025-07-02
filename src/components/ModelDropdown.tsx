@@ -43,7 +43,7 @@ export default function ModelDropdown({ models, selected, onSelect, disabled }: 
         disabled={disabled}
         className={`w-full px-3 py-2 border rounded-lg flex items-center justify-between bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none ${disabled ? 'opacity-50 cursor-not-allowed' : 'border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-purple-500'}`}
       >
-        <span>{current?.name || '选择模型'}</span>
+        <span>{current?.name || 'Select model'}</span>
         <svg
           className={`w-4 h-4 ml-2 transition-transform ${open ? 'rotate-180' : ''}`}
           fill="none"
@@ -77,14 +77,18 @@ export default function ModelDropdown({ models, selected, onSelect, disabled }: 
 
       {/* Info Dialog */}
       <Dialog
-        header="功能未开通"
+        header="Feature Unavailable"
         visible={dialogVisible}
         onClose={() => setDialogVisible(false)}
         onConfirm={() => setDialogVisible(false)}
-        confirmBtn="知道了"
+        confirmBtn="Got it"
         cancelBtn={null}
       >
-        请前往 <span className="font-semibold">Hugging Face</span> 开通相关功能，并到 <span className="font-semibold">EdgeOne Pages</span> 部署。
+        Please visit <span className="font-semibold">EdgeOne Pages</span> to&nbsp;
+        <a href="https://edgeone.ai/pages/new?from=template&template=image-generator-starter" target="_blank" className="text-blue-600 font-semibold">deploy</a>
+        &nbsp;your website and explore enhanced features (activation of the image generation functionality requires visiting&nbsp;
+        <a href="https://huggingface.co/models" target="_blank" className="text-blue-600 font-semibold">Hugging Face</a>
+        ).
       </Dialog>
     </div>
   );

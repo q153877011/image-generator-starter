@@ -49,7 +49,7 @@ export default function Home() {
     setIsClient(true);
   }, []);
 
-  // 生成计时器
+  // Generation timer
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
     if (isGenerating) {
@@ -73,10 +73,10 @@ export default function Home() {
 
     setIsGenerating(true);
     
-    // 获取当前选择的模型信息
+    // Get currently selected model info
     const modelInfo = platform.models.find(m => m.id === selectedModel);
     
-    // 创建加载状态的图片条目
+    // Create a loading placeholder record
     const loadingImage = {
       id: `${Date.now()}-${platform.id}`,
       platform: platform.name,
@@ -90,7 +90,7 @@ export default function Home() {
     setGeneratedImages([loadingImage]);
 
     try {
-      // 生成或获取设备指纹（保存在 localStorage，避免每次变化）
+      // Generate or retrieve device fingerprint (stored in localStorage for consistency)
       const fingerprint = (() => {
         if (typeof window === 'undefined') return '';
         let fp = localStorage.getItem('device_fp');
@@ -101,7 +101,7 @@ export default function Home() {
         return fp;
       })();
 
-      // 调用API生成图片
+      // Call backend API to generate image
       const res = await fetch('/v1/generate/hugging-face', {
         method: 'POST',
         headers: {
@@ -119,13 +119,13 @@ export default function Home() {
       const data = await res.json();
       
       if (!res.ok || data.error) {
-        // API 返回错误
+        // API returned an error
         setGeneratedImages([
           {
             ...loadingImage,
             imageUrl: '',
             isLoading: false,
-            error: data.error || `接口错误: ${res.status}`,
+            error: data.error || `HTTP error: ${res.status}`,
           },
         ]);
       } else {
@@ -147,13 +147,13 @@ export default function Home() {
       }
 
     } catch (error) {
-      console.error(`${platform.name} 生成失败:`, error);
+      console.error(`${platform.name} generation failed:`, error);
       
-      // 生成失败时显示错误图片
+      // When generation fails, show an error card
       setGeneratedImages([{
         ...loadingImage,
         imageUrl: '',
-        error: (error as Error).message || '生成失败',
+        error: (error as Error).message || 'Generation failed',
         isLoading: false,
       }]);
     }
@@ -169,9 +169,9 @@ export default function Home() {
   };
 
   const examplePrompts = [
-    "一只可爱的橙色小猫在花园里玩耍",
-    "未来主义城市的夜景，霓虹灯闪烁", 
-    "水彩画风格的山水风景画",
+    "A cute orange kitten playing in a garden",
+    "A futuristic city night scene with neon lights", 
+    "A watercolor landscape painting of mountains and rivers",
   ];
 
   return (
@@ -181,16 +181,14 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           {/* Brand */}
           <div className="flex items-center space-x-3">
-            <svg className="w-8 h-8 text-purple-600" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2z" />
-            </svg>
-            <span className="text-gray-800 dark:text-white text-xl font-semibold">AI 图像生成器</span>
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 128 128"><path fill="oklch(62.7% .265 303.9)" d="M105.33 1.6H22.67A22.64 22.64 0 0 0 0 24.27v79.46a22.64 22.64 0 0 0 22.67 22.67h82.66A22.64 22.64 0 0 0 128 103.73V24.27A22.64 22.64 0 0 0 105.33 1.6m-27.09 88H67.09a.82.82 0 0 1-.85-.59l-4.37-12.74H42L38 88.8a.93.93 0 0 1-1 .75H27c-.58 0-.74-.32-.58-1l17.1-49.4c.16-.54.32-1.12.53-1.76a18 18 0 0 0 .32-3.47a.54.54 0 0 1 .43-.59h13.81c.43 0 .64.16.7.43l19.46 54.93c.16.59 0 .86-.53.86Zm18.4-.6c0 .59-.21.85-.69.85H85.49a.75.75 0 0 1-.8-.85V47.89c0-.53.22-.74.7-.74H96c.48 0 .69.26.69.74Zm-1.12-48.2a6.3 6.3 0 0 1-4.85 1.87a6.6 6.6 0 0 1-4.75-1.87a6.87 6.87 0 0 1-1.81-4.91A6.23 6.23 0 0 1 86 31.15a6.8 6.8 0 0 1 4.74-1.87a6.4 6.4 0 0 1 4.86 1.87a6.75 6.75 0 0 1 1.76 4.74a6.76 6.76 0 0 1-1.84 4.91M58.67 65.44H45.12c.8-2.24 1.6-4.75 2.35-7.47s1.65-5.33 2.45-7.89a65 65 0 0 0 1.81-6.88h.11c.37 1.28.75 2.67 1.17 4.16s.91 3.09 1.44 4.75s1 3.25 1.55 4.9s1 3.15 1.44 4.59s.91 2.72 1.23 3.84"/></svg>
+            <span className="text-gray-800 dark:text-white text-xl font-semibold">Image Generator</span>
           </div>
 
           {/* Navigation links */}
           <nav className="hidden md:flex items-center space-x-6 text-gray-600 dark:text-gray-300 text-sm">
             <a
-              href="https://github.com"
+              href="https://github.com/q153877011/image-generator-starter"
               target="_blank"
               rel="noopener noreferrer"
               className="hover:text-gray-900 dark:hover:text-white transition-colors"
@@ -222,7 +220,7 @@ export default function Home() {
              {/* Text Input Card */}
              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-6">
                <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">
-                 图像描述
+                 Image description
                </h2>
                
                <form onSubmit={handleSubmit} className="space-y-4">
@@ -230,7 +228,7 @@ export default function Home() {
                    <textarea
                      value={inputValue}
                      onChange={(e) => setInputValue(e.target.value)}
-                     placeholder="描述你想要生成的图像，例如：一只可爱的橙色小猫在花园里玩耍..."
+                     placeholder="Describe the image you want, e.g. A cute orange kitten playing in a garden..."
                      className="w-full px-4 py-3 text-lg border-2 border-gray-300 dark:border-gray-600 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 transition-all duration-200"
                      rows={4}
                      onKeyDown={(e) => {
@@ -244,7 +242,7 @@ export default function Home() {
                  
                  <div className="flex items-center justify-between">
                    <div className="text-sm text-gray-500 dark:text-gray-400">
-                     按 Enter 生成图像，Shift + Enter 换行
+                     Press Enter to generate, Shift + Enter for newline
                    </div>
                    
                    <button
@@ -255,14 +253,14 @@ export default function Home() {
                      {isGenerating ? (
                        <>
                          <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                         <span>生成中...</span>
+                         <span>Generating...</span>
                        </>
                      ) : (
                        <>
                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                          </svg>
-                         <span>生成图像</span>
+                         <span>Generate</span>
                        </>
                      )}
                    </button>
@@ -272,7 +270,7 @@ export default function Home() {
                {/* Example Prompts */}
                <div className="mt-6">
                  <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-                   示例提示词：
+                  Example Prompts:
                  </h3>
                  <div className="grid grid-cols-1 gap-2">
                    {examplePrompts.map((prompt, index) => (
@@ -291,7 +289,7 @@ export default function Home() {
              {/* Model Selection Card */}
              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-6">
                <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">
-                 模型选择
+                Model Selection
                </h2>
                
                <div className="space-y-4">
@@ -316,11 +314,11 @@ export default function Home() {
              {/* Header */}
              <div className="bg-gradient-to-r from-purple-500 to-pink-500 px-6 py-4 rounded-t-xl">
                <h2 className="text-lg font-bold text-white">
-                 生成结果
+                 Generation Result
                </h2>
                {generatedImages.length > 0 && (
                  <p className="text-purple-100 text-sm mt-1">
-                   基于提示词: "{generatedImages[0]?.prompt}"
+                   Prompt: "{generatedImages[0]?.prompt}"
                  </p>
                )}
              </div>
@@ -329,17 +327,17 @@ export default function Home() {
              <div className="p-6">
                {isClient && generatedImages.length === 0 ? (
                  <div className="text-center py-20">
-                   <div className="w-16 h-16 bg-gray-200 dark:bg-gray-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                     <svg className="w-8 h-8 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                     </svg>
-                   </div>
-                   <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-                     等待生成图像
-                   </h3>
-                   <p className="text-gray-500 dark:text-gray-400">
-                     在左侧输入图像描述并选择 Hugging Face 模型，然后点击生成按钮开始创作
-                   </p>
+                    <div className="w-16 h-16 bg-gray-200 dark:bg-gray-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <svg className="w-8 h-8 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                    </div>
+                    <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+                      Waiting for Image Generation
+                    </h3>
+                  <p className="text-gray-500 dark:text-gray-400">
+                    Enter image description on the left and select a Hugging Face model, then click the generate button to start creating
+                  </p>
                  </div>
                ) : (
                  <div className="max-w-md mx-auto">
@@ -361,7 +359,7 @@ export default function Home() {
                            <div className="absolute inset-0 flex items-center justify-center">
                              <div className="text-center">
                                <div className="w-8 h-8 border-4 border-purple-500 border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
-                               <p className="text-sm text-gray-600 dark:text-gray-400">生成中 {elapsedSeconds.toFixed(1)}s</p>
+                               <p className="text-sm text-gray-600 dark:text-gray-400">Generating {elapsedSeconds.toFixed(1)}s</p>
                              </div>
                            </div>
                          ) : generatedImages[0]?.imageUrl ? (
