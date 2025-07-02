@@ -85,16 +85,72 @@ export async function onRequest({ request, params, env }) {
       try {
         body = await request.json();
       } catch (parseErr) {
-        console.warn('请求体 JSON 解析失败:', parseErr.message);
+        throw new Error('请求体 JSON 解析失败', parseErr);
       }
     }
     console.log('接收到的请求:', body);
+    
+    // ----  新增：简单的 IP + 设备指纹 请求次数校验  ----
+    const MAX_REQUESTS = 10;
+    const clientIp = request.headers.get('CF-Connecting-IP') ||
+                     request.headers.get('x-forwarded-for') ||
+                     request.headers.get('x-real-ip') ||
+                     'unknown';
+
+    // 从请求体或 header 中获取设备指纹
+    const deviceFingerprint = body.fingerprint || request.headers.get('x-device-fingerprint') || '';
+
+    // console.log('clientIp', clientIp);
+    // console.log('deviceFingerprint', deviceFingerprint);
+    // console.log('MAX_REQUESTS', MAX_REQUESTS);
+    // 将 IP 与设备指纹组合成唯一键
+    const userKey = `${clientIp}__${deviceFingerprint}`;
+    // console.log('userKey', userKey);
+
+    try {
+      // 如果在环境中绑定了 KV（推荐），使用 KV 来做跨实例的持久化计数
+      if (image_generage_cnt) {
+        const stored = await image_generage_cnt.get(userKey);
+        const currentCount = stored ? parseInt(stored, 10) : 0;
+        if (currentCount >= MAX_REQUESTS) {
+          return new Response(JSON.stringify({ error: `请求次数已达到上限（${MAX_REQUESTS}）` }), {
+            status: 429,
+            headers: {
+              'content-type': 'application/json; charset=UTF-8',
+              'Access-Control-Allow-Origin': '*',
+            },
+          });
+        }
+        // 计数 +1，并设置 24 小时 TTL，防止 KV 无限增长
+        await image_generage_cnt.put(userKey, String(currentCount + 1));
+      } else {
+        if(!image_generage_cnt) {
+          throw new Error('image_generage_cnt 未设置');
+        }
+        // 如果没有 KV 绑定，则使用内存 Map 作为回退（仅适用于单实例，随 Worker 冷启会清空）
+        globalThis.__rateLimitMap = globalThis.__rateLimitMap || new Map();
+        const currentCount = globalThis.__rateLimitMap.get(userKey) || 0;
+        if (currentCount >= MAX_REQUESTS) {
+          return new Response(JSON.stringify({ error: `请求次数已达到上限（${MAX_REQUESTS}）` }), {
+            status: 429,
+            headers: {
+              'content-type': 'application/json; charset=UTF-8',
+              'Access-Control-Allow-Origin': '*',
+            },
+          });
+        }
+        globalThis.__rateLimitMap.set(userKey, currentCount + 1);
+      }
+    } catch (rateErr) {
+      console.warn('请求计数更新失败:', rateErr);
+    }
+    // ----  IP + 设备指纹校验结束  ----
     
     // 检查环境变量
     if (!env.HF_TOKEN) {
       throw new Error('HF_TOKEN 环境变量未设置');
     }
-    
+
     // 从请求中获取用户输入的图像描述
     const prompt = body.image || "一幅美丽的风景画";
     
