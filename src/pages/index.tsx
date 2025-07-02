@@ -90,16 +90,29 @@ export default function Home() {
     setGeneratedImages([loadingImage]);
 
     try {
+      // 生成或获取设备指纹（保存在 localStorage，避免每次变化）
+      const fingerprint = (() => {
+        if (typeof window === 'undefined') return '';
+        let fp = localStorage.getItem('device_fp');
+        if (!fp) {
+          fp = (crypto.randomUUID?.() || Math.random().toString(36).slice(2) + Date.now().toString(36));
+          localStorage.setItem('device_fp', fp);
+        }
+        return fp;
+      })();
+
       // 调用API生成图片
       const res = await fetch('/v1/generate/hugging-face', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'x-device-fingerprint': fingerprint,
         },
         body: JSON.stringify({
           image: `${prompt} (${modelInfo?.name} style)`,
           platform: platform.id,
-          model: modelInfo?.value || selectedModel
+          model: modelInfo?.value || selectedModel,
+          fingerprint,
         })
       });
 

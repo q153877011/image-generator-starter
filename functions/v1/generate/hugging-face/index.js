@@ -90,27 +90,29 @@ export async function onRequest({ request, params, env }) {
     }
     console.log('接收到的请求:', body);
     
-    // ----  新增：简单的 IP + 设备指纹 请求次数校验  ----
+    // ----  新增：EdgeOne 版 IP + 设备指纹 限流 ----
     const MAX_REQUESTS = 10;
-    const clientIp = request.headers.get('CF-Connecting-IP') ||
-                     request.headers.get('x-forwarded-for') ||
-                     request.headers.get('x-real-ip') ||
-                     'unknown';
 
-    // 从请求体或 header 中获取设备指纹
+    // EdgeOne 回源会带 x-forwarded-for（形如 1.2.3.4, proxyip...），或 x-real-ip
+    function getClientIp(req) {
+      const xff = req.headers.get('x-forwarded-for');
+      if (xff) return xff.split(',')[0].trim();
+      const xReal = req.headers.get('x-real-ip');
+      if (xReal) return xReal;
+      return 'unknown';
+    }
+
+    const clientIp = getClientIp(request);
+
+    // 从请求体或 header 中获取设备指纹（前端需主动发送）
     const deviceFingerprint = body.fingerprint || request.headers.get('x-device-fingerprint') || '';
 
-    // console.log('clientIp', clientIp);
-    // console.log('deviceFingerprint', deviceFingerprint);
-    // console.log('MAX_REQUESTS', MAX_REQUESTS);
-    // 将 IP 与设备指纹组合成唯一键
     const userKey = `${clientIp}__${deviceFingerprint}`;
-    // console.log('userKey', userKey);
 
     try {
-      // 如果在环境中绑定了 KV（推荐），使用 KV 来做跨实例的持久化计数
-      if (image_generage_cnt) {
-        const stored = await image_generage_cnt.get(userKey);
+      const kv = image_generage_cnt; // 在 pages.toml／控制台中绑定 KV
+      if (kv) {
+        const stored = await kv.get(userKey);
         const currentCount = stored ? parseInt(stored, 10) : 0;
         if (currentCount >= MAX_REQUESTS) {
           return new Response(JSON.stringify({ error: `请求次数已达到上限（${MAX_REQUESTS}）` }), {
@@ -144,7 +146,7 @@ export async function onRequest({ request, params, env }) {
     } catch (rateErr) {
       console.warn('请求计数更新失败:', rateErr);
     }
-    // ----  IP + 设备指纹校验结束  ----
+    // ----  限流结束  ----
     
     // 检查环境变量
     if (!env.HF_TOKEN) {
