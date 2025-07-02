@@ -101,55 +101,6 @@ export async function onRequest({ request, params, env }) {
     // 使用前端传来的模型 value
     const model = body.model || "stability-ai/sdxl";
     
-    // // ----  新增：简单的 IP + 设备指纹 请求次数校验  ----
-    // const MAX_REQUESTS = 10;
-    // const clientIp = request.headers.get('CF-Connecting-IP') ||
-    //                  request.headers.get('x-forwarded-for') ||
-    //                  request.headers.get('x-real-ip') ||
-    //                  'unknown';
-
-    // // 从请求体或 header 中获取设备指纹
-    // const deviceFingerprint = body.fingerprint || request.headers.get('x-device-fingerprint') || '';
-
-    // // 将 IP 与设备指纹组合成唯一键
-    // const userKey = `${clientIp}__${deviceFingerprint}`;
-
-    // try {
-    //   // 如果在环境中绑定了 KV（推荐），使用 KV 来做跨实例的持久化计数
-    //   if (env.RATE_LIMIT_KV) {
-    //     const stored = await env.RATE_LIMIT_KV.get(userKey);
-    //     const currentCount = stored ? parseInt(stored, 10) : 0;
-    //     if (currentCount >= MAX_REQUESTS) {
-    //       return new Response(JSON.stringify({ error: `请求次数已达到上限（${MAX_REQUESTS}）` }), {
-    //         status: 429,
-    //         headers: {
-    //           'content-type': 'application/json; charset=UTF-8',
-    //           'Access-Control-Allow-Origin': '*',
-    //         },
-    //       });
-    //     }
-    //     // 计数 +1，并设置 24 小时 TTL，防止 KV 无限增长
-    //     await env.RATE_LIMIT_KV.put(userKey, String(currentCount + 1), { expirationTtl: 24 * 60 * 60 });
-    //   } else {
-    //     // 如果没有 KV 绑定，则使用内存 Map 作为回退（仅适用于单实例，随 Worker 冷启会清空）
-    //     globalThis.__rateLimitMap = globalThis.__rateLimitMap || new Map();
-    //     const currentCount = globalThis.__rateLimitMap.get(userKey) || 0;
-    //     if (currentCount >= MAX_REQUESTS) {
-    //       return new Response(JSON.stringify({ error: `请求次数已达到上限（${MAX_REQUESTS}）` }), {
-    //         status: 429,
-    //         headers: {
-    //           'content-type': 'application/json; charset=UTF-8',
-    //           'Access-Control-Allow-Origin': '*',
-    //         },
-    //       });
-    //     }
-    //     globalThis.__rateLimitMap.set(userKey, currentCount + 1);
-    //   }
-    // } catch (rateErr) {
-    //   console.warn('请求计数更新失败:', rateErr);
-    // }
-    // ----  IP + 设备指纹校验结束  ----
-    
     const handlers = {
       'stability-ai/sdxl': () => newbius_query({
         response_format: 'b64_json',

@@ -91,7 +91,7 @@ export default function Home() {
 
     try {
       // 调用API生成图片
-      const res = await fetch('http://localhost:8088/v1/generate/hugging-face', {
+      const res = await fetch('/api/v1/generate/hugging-face', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
