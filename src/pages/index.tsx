@@ -29,8 +29,8 @@ const platform = {
   name: 'Hugging Face',
   models: [
     { id: 'blackflux', name: 'black-forest-labs/flux-schnell', value: "black-forest-labs/flux-schnell" },
-    { id: 'sdxl', name: 'stabilityai/stable-diffusion-xl-base-1.0', value: "stability-ai/sdxl" },
-    { id: 'blackflux1', name: 'black-forest-labs/FLUX.1-dev', value: "black-forest-labs/flux-dev"},
+    { id: 'sdxl', name: 'stabilityai/stable-diffusion-xl-base-1.0', value: "stability-ai/sdxl", disabled: true},
+    { id: 'blackflux1', name: 'black-forest-labs/FLUX.1-dev', value: "black-forest-labs/flux-dev", disabled: true},
     { id: 'pixelxl', name: 'nerijs/pixel-art-xl', value: "nerijs/pixel-art-xl", disabled: true},
     { id: 'hidreamfull1', name: 'HiDream-ai/HiDream-I1-Full', value: "HiDream-ai/HiDream-I1-Full", disabled: true},
     { id: 'btsd', name: 'ByteDance/Hyper-SD', value: "ByteDance/Hyper-SD", disabled: true },
