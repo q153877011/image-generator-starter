@@ -52,7 +52,7 @@ export default function Home() {
   // Token availability states (default false, updated after API call)
   const [hasHfToken, setHasHfToken] = useState<boolean>(false);
   const [hasNebiusToken, setHasNebiusToken] = useState<boolean>(false);
-  const disabledList = ['pixelxl', 'hidreamfull1', 'btsd', 'sdxl-turbo'];
+  const disabledList = ['sdxl', 'blackdev', 'pixelxl', 'hidreamfull1', 'btsd', 'sdxl-turbo'];
 
   // Fetch token presence once on mount
   useEffect(() => {
