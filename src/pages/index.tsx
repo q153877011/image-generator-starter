@@ -1,17 +1,6 @@
 import Image from "next/image";
 import { useState, useRef, useEffect, useMemo } from "react";
-import { Geist, Geist_Mono } from "next/font/google";
 import ModelDropdown from "../components/ModelDropdown";
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
 
 interface GeneratedImage {
   id: string;
@@ -248,7 +237,7 @@ export default function Home() {
   ];
 
   return (
-    <div className={`${geistSans.variable} ${geistMono.variable} min-h-screen bg-gray-50 dark:bg-gray-900 font-[family-name:var(--font-geist-sans)]`}>
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       {/* Header / Navbar */}
       <header className="bg-gray-100 dark:bg-gray-900 shadow-sm border-b border-gray-200 dark:border-gray-700">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
@@ -313,15 +302,14 @@ export default function Home() {
                    />
                  </div>
                  
-                 <div className="flex items-center justify-between">
-                   <div className="text-sm text-gray-500 dark:text-gray-400">
+                 <div className="flex items-start justify-between">
+                   <div className="text-sm text-gray-500 dark:text-gray-400 self-start">
                      Press Enter to generate, Shift + Enter for newline
                    </div>
-                   
                    <button
                      type="submit"
                      disabled={!inputValue.trim() || isGenerating || !selectedModel}
-                     className="px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 disabled:from-gray-300 disabled:to-gray-300 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-all duration-200 flex items-center space-x-2 shadow-lg hover:shadow-xl"
+                     className="px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 disabled:from-gray-300 disabled:to-gray-300 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-all duration-200 flex items-center space-x-2 shadow-lg hover:shadow-xl self-start"
                    >
                      {isGenerating ? (
                        <>
@@ -382,7 +370,7 @@ export default function Home() {
            </div>
 
            {/* Right Side - Generated Images Display */}
-           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 flex flex-col h-full">
+           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 flex flex-col h-[700px]">
              
              {/* Header */}
              <div className="bg-gradient-to-r from-purple-500 to-pink-500 px-6 py-4 rounded-t-xl">
@@ -413,11 +401,11 @@ export default function Home() {
                   </p>
                  </div>
                ) : (
-                 <div className="w-full h-full">
+                 <div className="w-full h-[calc(600px-64px)]"> {/* 64px header height */}
                    {generatedImages.length > 0 && (
                      <div className="overflow-hidden flex flex-col h-full">
                        {/* Image with hover download */}
-                       <div className="relative bg-gray-100 dark:bg-gray-600 group flex-1">
+                       <div className="relative bg-gray-100 dark:bg-gray-600 group h-full">
                          {generatedImages[0]?.isLoading ? (
                            <div className="absolute inset-0 flex items-center justify-center">
                              <div className="text-center">
