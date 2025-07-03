@@ -374,7 +374,7 @@ export default function Home() {
                      models={models}
                      selected={selectedModel}
                      onSelect={setSelectedModel}
-                     disabled={isGenerating || models.filter(m=>!m.disabled).length===0}
+                     disabled={isGenerating}
                    />
                  </div>
                </div>
