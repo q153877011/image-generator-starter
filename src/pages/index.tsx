@@ -1,6 +1,7 @@
 import Image from "next/image";
 import { useState, useRef, useEffect, useMemo } from "react";
 import ModelDropdown from "../components/ModelDropdown";
+import ImageDisplay from "../components/ImageDisplay";
 
 interface GeneratedImage {
   id: string;
@@ -20,13 +21,14 @@ const platform = {
 
 // Base model definitions
 const baseModels = [
-  { id: 'blackschnell', name: 'black-forest-labs/flux-schnell', value: "black-forest-labs/flux-schnell", platform: 'nebius' },
-  { id: 'sdxl', name: 'stabilityai/stable-diffusion-xl-base-1.0', value: "stability-ai/sdxl",  platform: 'nebius'},
-  { id: 'blackdev', name: 'black-forest-labs/flux-dev', value: "black-forest-labs/flux-dev", platform: 'nebius', disabled: true},
-  { id: 'pixelxl', name: 'nerijs/pixel-art-xl', value: "nerijs/pixel-art-xl", platform: 'huggingface', disabled: true},
-  { id: 'hidreamfull1', name: 'HiDream-ai/HiDream-I1-Full', value: "HiDream-ai/HiDream-I1-Full", platform: 'huggingface', disabled: true},
-  { id: 'btsd', name: 'ByteDance/Hyper-SD', value: "ByteDance/Hyper-SD", disabled: true, platform: 'huggingface' },
-  { id: 'sdxl-turbo', name: 'stabilityai/sdxl-turbo', value: "stabilityai/sdxl-turbo", disabled: true, platform: 'huggingface'},
+  { id: 'blackschnell', name: 'black-forest-labs/flux-schnell', value: "black-forest-labs/flux-schnell", platform: 'Nebius' },
+  { id: 'sdxl', name: 'stabilityai/stable-diffusion-xl-base-1.0', value: "stability-ai/sdxl",  platform: 'Nebius'},
+  { id: 'blackdev', name: 'black-forest-labs/flux-dev', value: "black-forest-labs/flux-dev", platform: 'Nebius', disabled: true},
+  { id: 'pixelxl', name: 'nerijs/pixel-art-xl', value: "nerijs/pixel-art-xl", platform: 'Hugging Face', disabled: true},
+  { id: 'hidreamfull1', name: 'HiDream-ai/HiDream-I1-Full', value: "HiDream-ai/HiDream-I1-Full", platform: 'Hugging Face', disabled: true},
+  { id: 'btsd', name: 'ByteDance/Hyper-SD', value: "ByteDance/Hyper-SD", disabled: true, platform: 'Hugging Face' },
+  { id: 'sdxl-turbo', name: 'stabilityai/sdxl-turbo', value: "stabilityai/sdxl-turbo", disabled: true, platform: 'Hugging Face'},
+  { id: 'google-imagen-4', name: 'google/imagen-4', value: "google/imagen-4", disabled: true, platform: 'Replicate'},
 ];
 
 export default function Home() {
@@ -41,6 +43,9 @@ export default function Home() {
   // Token availability states (default false, updated after API call)
   const [hasHfToken, setHasHfToken] = useState<boolean>(false);
   const [hasNebiusToken, setHasNebiusToken] = useState<boolean>(false);
+  const [hasReplicateToken, setHasReplicateToken] = useState<boolean>(false);
+  const [imageLoadError, setImageLoadError] = useState<boolean>(false);
+  const [imageLoading, setImageLoading] = useState<boolean>(false);
   const disabledList = ['sdxl', 'blackdev', 'pixelxl', 'hidreamfull1', 'btsd', 'sdxl-turbo'];
 
   // Fetch token presence once on mount
@@ -58,12 +63,13 @@ export default function Home() {
           return await res.json();
         } catch (err) {
           console.warn('token-status response is not valid JSON:', err);
-          return { hfToken: false, nebiusToken: false };
+          return { hfToken: false, nebiusToken: false, replicateToken: false };
         }
       })
-      .then((data: { hfToken?: boolean; nebiusToken?: boolean }) => {
+      .then((data: { hfToken?: boolean; nebiusToken?: boolean; replicateToken?: boolean }) => {
         setHasHfToken(Boolean(data?.hfToken));
         setHasNebiusToken(Boolean(data?.nebiusToken));
+        setHasReplicateToken(Boolean(data?.replicateToken));
       })
       .catch((err) => {
         console.error('Failed to fetch token status:', err);
@@ -74,11 +80,14 @@ export default function Home() {
     return baseModels.map((m) => {
       let disabled = m.disabled ?? false;
    
-      if (m.platform === 'huggingface') {
+      if (m.platform === 'Hugging Face') {
         disabled = !hasHfToken;
       }
-      if (m.platform === 'nebius') {
+      if (m.platform === 'Nebius') {
         disabled = !hasNebiusToken;
+      }
+      if (m.platform === 'Replicate') {
+        disabled = !hasReplicateToken;
       }
       // Always disable if in disabledList
       if (disabledList.includes(m.id)) {
@@ -86,7 +95,7 @@ export default function Home() {
       }
       return { ...m, disabled };
     });
-  }, [hasHfToken, hasNebiusToken]);
+  }, [hasHfToken, hasNebiusToken, hasReplicateToken]);
 
   useEffect(() => {
     setIsClient(true);
@@ -95,7 +104,13 @@ export default function Home() {
   // Update display platform when selected model changes
   useEffect(() => {
     const modelInfo = models.find((m) => m.id === selectedModel);
-    setDisplayPlatformName(modelInfo?.platform === 'nebius' ? 'Nebius' : 'Hugging Face');
+    if (modelInfo?.platform === 'Nebius') {
+      setDisplayPlatformName('Nebius');
+    } else if (modelInfo?.platform === 'Replicate') {
+      setDisplayPlatformName('Replicate');
+    } else {
+      setDisplayPlatformName('Hugging Face');
+    }
   }, [selectedModel]);
 
   // Generation timer
@@ -173,24 +188,55 @@ export default function Home() {
         })
       });
 
-      const data = await res.json();
-      
-      if (!res.ok || data.error) {
-        // API returned an error
+      let data;
+      try {
+        data = await res.json();
+      } catch (jsonError) {
+        console.error('JSON parsing error:', jsonError);
+        // 如果 JSON 解析失败，尝试获取响应文本
+        const responseText = await res.text();
+        console.error('Response text:', responseText);
+        
         setGeneratedImages([
           {
             ...loadingImage,
             imageUrl: '',
             isLoading: false,
-            error: data.error || `HTTP error: ${res.status}`,
+            error: `API returned invalid response format. Status: ${res.status}`,
+          },
+        ]);
+        return;
+      }
+      
+      if (!res.ok || data.error) {
+        // API returned an error
+        const errorMessage = data.error || `HTTP error: ${res.status}`;
+        const errorDetails = data.details ? `\nDetails: ${data.details}` : '';
+        
+        setGeneratedImages([
+          {
+            ...loadingImage,
+            imageUrl: '',
+            isLoading: false,
+            error: `${errorMessage}${errorDetails}`,
           },
         ]);
       } else {
-        if (data.imageBase64) {
+        if (data.imageData) {
+          // Check if imageData is a URL or base64 data
+          let imageUrl;
+          if (typeof data.imageData === 'string' && data.imageData.startsWith('http')) {
+            // It's a URL, use directly
+            imageUrl = data.imageData;
+          } else {
+            // It's base64 data, add data URL prefix
+            imageUrl = `data:image/png;base64,${data.imageData}`;
+          }
+          
           setGeneratedImages([
             {
               ...loadingImage,
-              imageUrl: `data:image/png;base64,${data.imageBase64}`,
+              imageUrl: imageUrl,
               isLoading: false,
               error: undefined,
             },
@@ -221,6 +267,74 @@ export default function Home() {
     }
 
     setIsGenerating(false);
+  };
+
+  // 图片下载函数
+  const downloadImage = async (imageUrl: string, filename: string) => {
+    try {
+      setImageLoading(true);
+      
+      // 如果是 data URL，直接下载
+      if (imageUrl.startsWith('data:')) {
+        const link = document.createElement('a');
+        link.href = imageUrl;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        return;
+      }
+      
+      // 如果是在线图片，先获取图片数据
+      const response = await fetch(imageUrl);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch image: ${response.status}`);
+      }
+      
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      
+    } catch (error) {
+      console.error('Download failed:', error);
+      alert('下载失败，请重试');
+    } finally {
+      setImageLoading(false);
+    }
+  };
+
+  // 获取图片格式
+  const getImageFormat = (imageUrl: string): string => {
+    if (imageUrl.startsWith('data:')) {
+      const match = imageUrl.match(/data:([^;]+)/);
+      if (match) {
+        const mimeType = match[1];
+        if (mimeType.includes('jpeg') || mimeType.includes('jpg')) return 'jpg';
+        if (mimeType.includes('png')) return 'png';
+        if (mimeType.includes('webp')) return 'webp';
+      }
+      return 'png'; // 默认格式
+    }
+    
+    // 从 URL 中检测格式
+    const url = imageUrl.toLowerCase();
+    if (url.includes('.jpg') || url.includes('.jpeg')) return 'jpg';
+    if (url.includes('.png')) return 'png';
+    if (url.includes('.webp')) return 'webp';
+    
+    return 'png'; // 默认格式
+  };
+
+  // 生成文件名
+  const generateFilename = (prompt: string, format: string): string => {
+    const cleanPrompt = prompt.slice(0, 20).trim().replace(/[^a-zA-Z0-9\s-]/g, '').replace(/\s+/g, '-');
+    return `${cleanPrompt}.${format}`;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -370,114 +484,40 @@ export default function Home() {
            </div>
 
            {/* Right Side - Generated Images Display */}
-           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 flex flex-col h-[700px]">
-             
-             {/* Header */}
-             <div className="bg-gradient-to-r from-purple-500 to-pink-500 px-6 py-4 rounded-t-xl">
-               <h2 className="text-lg font-bold text-white">
-                 Generation Result
-               </h2>
-               {generatedImages.length > 0 && (
-                 <p className="text-purple-100 text-sm mt-1">
-                   Prompt: "{generatedImages[0]?.prompt}"
-                 </p>
-               )}
-             </div>
-
-             {/* Content */}
-             <div className="flex-1 p-0">
-               {isClient && generatedImages.length === 0 ? (
-                 <div className="text-center py-20">
-                    <div className="w-16 h-16 bg-gray-200 dark:bg-gray-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                      <svg className="w-8 h-8 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                      </svg>
-                    </div>
-                    <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-                      Waiting for Image Generation
-                    </h3>
-                  <p className="text-gray-500 dark:text-gray-400">
-                    Enter image description on the left and select a Hugging Face model, then click the generate button to start creating
-                  </p>
-                 </div>
-               ) : (
-                 <div className="w-full h-[calc(600px-64px)]"> {/* 64px header height */}
-                   {generatedImages.length > 0 && (
-                     <div className="overflow-hidden flex flex-col h-full">
-                       {/* Image with hover download */}
-                       <div className="relative bg-gray-100 dark:bg-gray-600 group h-full">
-                         {generatedImages[0]?.isLoading ? (
-                           <div className="absolute inset-0 flex items-center justify-center">
-                             <div className="text-center">
-                               <div className="w-8 h-8 border-4 border-purple-500 border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
-                               <p className="text-sm text-gray-600 dark:text-gray-400">Generating {elapsedSeconds.toFixed(1)}s</p>
-                             </div>
-                           </div>
-                         ) : generatedImages[0]?.imageUrl ? (
-                           <>
-                             <Image
-                               src={generatedImages[0].imageUrl}
-                               alt={`${displayPlatformName} generated image`}
-                               fill
-                               className="object-cover"
-                               sizes="(max-width: 768px) 100vw, 50vw"
-                               unoptimized
-                             />
-                             {/* Download button */}
-                             <a
-                               href={generatedImages[0].imageUrl}
-                               download={`${(generatedImages[0]?.prompt || 'image').slice(0, 10).trim().replace(/\s+/g, '-')}.png`}
-                               className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity"
-                               aria-label="下载图片"
-                             >
-                               <svg
-                                 className="w-10 h-10 text-white bg-black bg-opacity-60 rounded-full p-2 shadow-lg hover:bg-opacity-80 transition-colors"
-                                 fill="currentColor"
-                                 viewBox="0 0 24 24"
-                               >
-                                 <path d="M12 16l4-5h-3V4h-2v7H8l4 5zm-7 2v2h14v-2H5z" />
-                               </svg>
-                             </a>
-                           </>
-                         ) : generatedImages[0]?.error ? (
-                           <div className="absolute inset-0 flex items-center justify-center">
-                             <div className="text-center text-red-500 px-4">
-                               <svg className="w-12 h-12 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                               </svg>
-                               <p className="text-sm">{generatedImages[0]?.error}</p>
-                             </div>
-                           </div>
-                         ) : (
-                           <div className="absolute inset-0 flex items-center justify-center">
-                             <div className="text-center text-gray-400">
-                               <svg className="w-12 h-12 mx-auto mb-2 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                               </svg>
-                               <p className="text-sm">等待生成</p>
-                             </div>
-                           </div>
-                         )}
-                       </div>
-                       
-                       {/* Footer / Info Section */}
-                       <div className="bg-gray-50 dark:bg-gray-700 px-4 py-3 space-y-1">
-                         <h4 className="text-sm font-medium text-gray-900 dark:text-white">
-                           {generatedImages[0]?.platform || 'Hugging Face'}
-                         </h4>
-                         <p className="text-xs text-gray-500 dark:text-gray-400">
-                          Model used:  {generatedImages[0]?.model || '--'}
-                         </p>
-                         <p className="text-xs text-gray-500 dark:text-gray-400">
-                          Generation time: {isClient && generatedImages[0] ? generatedImages[0].timestamp.toLocaleTimeString() : '--'}
-                         </p>
-                       </div>
-                     </div>
-                   )}
-                 </div>
-               )}
-             </div>
-           </div>
+           <ImageDisplay
+             generatedImages={generatedImages}
+             isClient={isClient}
+             elapsedSeconds={elapsedSeconds}
+             imageLoading={imageLoading}
+             imageLoadError={imageLoadError}
+             displayPlatformName={displayPlatformName}
+             onDownload={downloadImage}
+             onRetry={(imageUrl) => {
+               setImageLoadError(false);
+               setImageLoading(true);
+               // 触发图片重新加载
+               const img = new window.Image();
+               img.onload = () => {
+                 setImageLoadError(false);
+                 setImageLoading(false);
+               };
+               img.onerror = () => {
+                 setImageLoadError(true);
+                 setImageLoading(false);
+               };
+               img.src = imageUrl;
+             }}
+             onImageLoad={() => {
+               setImageLoadError(false);
+               setImageLoading(false);
+             }}
+             onImageError={() => {
+               setImageLoadError(true);
+               setImageLoading(false);
+             }}
+             getImageFormat={getImageFormat}
+             generateFilename={generateFilename}
+           />
          </div>
        </main>
     </div>
