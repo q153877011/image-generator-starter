@@ -68,10 +68,6 @@ export async function onRequest({ request, params, env }) {
       console.warn('请求计数更新失败:', rateErr);
     }
     // ----  Rate-limit section end  ----
-    // Check environment variable
-    if (!env.HF_TOKEN) {
-      throw new Error('HF_TOKEN environment variable is not set');
-    }
     // Get prompt text from request
     const prompt = body.image || "一幅美丽的风景画";
     
