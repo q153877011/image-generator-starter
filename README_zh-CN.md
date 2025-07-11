@@ -67,6 +67,8 @@
    REPLICATE_TOKEN=your_replicate_token_here
    ```
 
+      EdgeOne Pages 部署控制台环境变量配置同上述 `.env` 文件保持一致。
+
 4. **启动开发服务器**
    ```bash
    npm run dev

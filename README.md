@@ -30,7 +30,6 @@ A modern AI image generation web application that supports multiple AI platforms
 ### Backend
 - **EdgeOne Functions** - Edge computing functions
 - **Multi-Platform API Integration** - Hugging Face, Nebius, Replicate
-- **Content Security Filtering** - NSFW detection
 
 ## 🚀 Quick Start
 
@@ -67,6 +66,8 @@ A modern AI image generation web application that supports multiple AI platforms
    # Replicate API Token
    REPLICATE_TOKEN=your_replicate_token_here
    ```
+
+    The EdgeOne Pages deployment console environment variable configuration is consistent with the above `.env` file.
 
 4. **Start Development Server**
    ```bash
