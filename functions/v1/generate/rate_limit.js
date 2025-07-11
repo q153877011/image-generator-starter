@@ -4,7 +4,7 @@
  * Uses a single key to store all user rate limit data to save storage space
  */
 
-const RATE_LIMIT_KEY = 'rate_limit_data';
+const RATE_LIMIT_KEY = 'image_rate_limit_data';
 const CLEANUP_INTERVAL = 24 * 7 * 60 * 60 * 1000; // 7 days in milliseconds
 
 /**
