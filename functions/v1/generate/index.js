@@ -27,47 +27,6 @@ export async function onRequest({ request, params, env }) {
       }
     }
     console.log('Incoming request:', body);
-    // ----  EdgeOne version: rate-limit by IP + device fingerprint ----
-    const MAX_REQUESTS = 10;
-    const userKey = `${eo.clientIp}`;
-    try {
-      const kv = image_generage_cnt; // KV binding defined in pages.toml / dashboard
-      if (kv) {
-        const stored = await kv.get(userKey);
-        const currentCount = stored ? parseInt(stored, 10) : 0;
-        if (currentCount >= MAX_REQUESTS) {
-          return new Response(JSON.stringify({ error: `The demo experience is limited to (${MAX_REQUESTS}) generations. For more AI image generation features, please deploy on EdgeOne Pages.` }), {
-            status: 429,
-            headers: {
-              'content-type': 'application/json; charset=UTF-8',
-              'Access-Control-Allow-Origin': '*',
-            },
-          });
-        }
-        // Increment count and set 24-hour TTL to avoid unlimited growth
-        await image_generage_cnt.put(userKey, String(currentCount + 1));
-      } else {
-        if(!image_generage_cnt) {
-          throw new Error('image_generage_cnt KV binding is not configured');
-        }
-        // If KV is not bound, fall back to in-memory Map (single instance, resets on cold start)
-        globalThis.__rateLimitMap = globalThis.__rateLimitMap || new Map();
-        const currentCount = globalThis.__rateLimitMap.get(userKey) || 0;
-        if (currentCount >= MAX_REQUESTS) {
-          return new Response(JSON.stringify({ error: `The demo experience is limited to (${MAX_REQUESTS}) generations. For more AI image generation features, please deploy on EdgeOne Pages.` }), {
-            status: 429,
-            headers: {
-              'content-type': 'application/json; charset=UTF-8',
-              'Access-Control-Allow-Origin': '*',
-            },
-          });
-        }
-        globalThis.__rateLimitMap.set(userKey, currentCount + 1);
-      }
-    } catch (rateErr) {
-      console.warn('请求计数更新失败:', rateErr);
-    }
-    // ----  Rate-limit section end  ----
     // Get prompt text from request
     const prompt = body.image || "一幅美丽的风景画";
     
