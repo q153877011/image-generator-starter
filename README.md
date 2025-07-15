@@ -69,6 +69,12 @@ Deploy with EdgeOne Pages.
    
    # Replicate API Token
    REPLICATE_TOKEN=your_replicate_token_here
+
+   # OPENAI API Key
+   OPENAI_API_KEY=your_openai_api_key_here   
+
+   # FAL API Key
+   FAL_KEY=your_fal_key_here
    ```
 
     The EdgeOne Pages deployment console environment variable configuration is consistent with the above `.env` file.
@@ -107,6 +113,20 @@ Deploy with EdgeOne Pages.
 3. Go to [Account Settings](https://replicate.com/account)
 4. Create an API token
 5. Copy the token to the `REPLICATE_TOKEN` environment variable
+
+#### OpenAI
+1. Visit [OpenAI](https://platform.openai.com/)
+2. Register and login to your account
+3. Go to [API Keys](https://platform.openai.com/api-keys)
+4. Create a new API key
+5. Copy the key to the `OPENAI_API_KEY` environment variable
+
+#### FAL
+1. Visit [FAL](https://fal.ai/)
+2. Register and login to your account
+3. Go to [API Keys](https://fal.ai/app/apikeys)
+4. Create an API key
+5. Copy the key to the `FAL_KEY` environment variable
 
 ### Token Status Check
 

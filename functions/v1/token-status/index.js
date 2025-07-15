@@ -19,12 +19,16 @@ export async function onRequest({ request, env }) {
   const hfTokenPresent = Boolean(env.HF_TOKEN);
   const nebiusTokenPresent = Boolean(env.NEBIUS_TOKEN);
   const replicateTokenPresent = Boolean(env.REPLICATE_TOKEN);
+  const openaiTokenPresent = Boolean(env.OPENAI_API_KEY);
+  const falTokenPresent = Boolean(env.FAL_KEY);
 
   return new Response(
     JSON.stringify({ 
       hfToken: hfTokenPresent, 
       nebiusToken: nebiusTokenPresent, 
-      replicateToken: replicateTokenPresent 
+      replicateToken: replicateTokenPresent,
+      openaiToken: openaiTokenPresent,
+      falToken: falTokenPresent
     }),
     {
       headers: {

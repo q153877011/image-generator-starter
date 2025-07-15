@@ -1,5 +1,5 @@
-import { useState, useRef, useEffect } from 'react';
-import { Dialog } from 'tdesign-react';
+import { useState, useRef, useEffect, useMemo } from 'react';
+import { Dialog, Tooltip } from 'tdesign-react';
 
 export interface ModelOption {
   id: string;
@@ -17,17 +17,42 @@ interface ModelDropdownProps {
 }
 
 /**
- * Non-native dropdown component for model selection with platform grouping.
+ * Custom tree dropdown component for model selection with platform grouping.
  */
 export default function ModelDropdown({ models, selected, onSelect, disabled }: ModelDropdownProps) {
-  const [open, setOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const [dialogVisible, setDialogVisible] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
+  const [expanded, setExpanded] = useState<string[]>([]);
 
+  // Group models by platform and get platform order
+  const { groupedModels, platformOrder } = useMemo(() => {
+    const grouped = models.reduce((groups, model) => {
+      const platform = model.platform || 'Other';
+      if (!groups[platform]) {
+        groups[platform] = [];
+      }
+      groups[platform].push(model);
+      return groups;
+    }, {} as Record<string, ModelOption[]>);
+
+    const order = Array.from(new Set(models.map(m => m.platform || 'Other')));
+    
+    return { groupedModels: grouped, platformOrder: order };
+  }, [models]);
+
+  // Initialize expanded state with first platform
+  useEffect(() => {
+    if (platformOrder.length > 0) {
+      setExpanded([platformOrder[0]]);
+    }
+  }, [platformOrder]);
+
+  // Handle click outside to close dropdown
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
-        setOpen(false);
+        setIsOpen(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -36,43 +61,37 @@ export default function ModelDropdown({ models, selected, onSelect, disabled }: 
 
   const current = models.find((m) => m.id === selected);
 
-  // Group models by platform
-  const groupedModels = models.reduce((groups, model) => {
-    const platform = model.platform || 'Other';
-    if (!groups[platform]) {
-      groups[platform] = [];
+  // Toggle platform expansion
+  const togglePlatform = (platform: string) => {
+    setExpanded(prev => 
+      prev.includes(platform) 
+        ? prev.filter(p => p !== platform) 
+        : [...prev, platform]
+    );
+  };
+
+  // Handle model selection
+  const handleModelSelect = (model: ModelOption) => {
+    if (model.disabled) {
+      setDialogVisible(true);
+      return;
     }
-    groups[platform].push(model);
-    return groups;
-  }, {} as Record<string, ModelOption[]>);
-
-  // Get platform names in order of appearance
-  const platformOrder = Array.from(new Set(models.map(m => m.platform || 'Other')));
-
-  // Unified platform theme configuration
-  const getPlatformTheme = () => {
-    return {
-      gradient: 'from-blue-500 to-blue-600',
-      icon: (
-        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
-        </svg>
-      ),
-      textColor: 'text-white'
-    };
+    onSelect(model.id);
+    setIsOpen(false);
   };
 
   return (
     <div className="relative" ref={dropdownRef}>
+      {/* Dropdown Button */}
       <button
         type="button"
-        onClick={() => !disabled && setOpen((prev) => !prev)}
+        onClick={() => !disabled && setIsOpen(!isOpen)}
         disabled={disabled}
         className={`w-full px-3 py-2 border rounded-lg flex items-center justify-between bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none ${disabled ? 'opacity-50 cursor-not-allowed' : 'border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-purple-500'}`}
       >
         <span>{current?.name || 'Select model'}</span>
         <svg
-          className={`w-4 h-4 ml-2 transition-transform ${open ? 'rotate-180' : ''}`}
+          className={`w-4 h-4 ml-2 transition-transform ${isOpen ? 'rotate-180' : ''}`}
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -81,52 +100,66 @@ export default function ModelDropdown({ models, selected, onSelect, disabled }: 
         </svg>
       </button>
 
-      {open && !disabled && (
-        <ul className="absolute z-10 mb-1 bottom-full w-full bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg shadow-xl max-h-60 overflow-auto transform transition-all duration-200 ease-out animate-in fade-in-0 slide-in-from-top-2">
-          {platformOrder.map((platform, platformIndex) => (
-            <div key={platform}>
-              {/* Platform header */}
-              {(() => {
-                const theme = getPlatformTheme();
-                return (
-                  <div className={`px-4 py-3 bg-gradient-to-r ${theme.gradient} shadow-sm`}>
+      {/* Dropdown Menu */}
+      {isOpen && !disabled && (
+        <div className="absolute z-10 mb-1 bottom-full w-full bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg shadow-xl max-h-60 overflow-auto transform transition-all duration-200 ease-out">
+          {platformOrder.map((platform, platformIndex) => {
+            // 过滤出当前platform下所有非disabled的model
+            const enabledModels = groupedModels[platform].filter((model) => !model.disabled);
+            if (enabledModels.length === 0) {
+              return null; // 全部disabled则不渲染该platform
+            }
+            // 统计前面有多少可见platform，用于分隔线判断
+            const visiblePlatformCount = platformOrder.slice(0, platformIndex).reduce((count, p) => count + (groupedModels[p].filter((m) => !m.disabled).length > 0 ? 1 : 0), 0);
+            return (
+              <div key={platform}>
+                {/* Platform Header */}
+                <div 
+                  className="px-4 py-3 shadow-sm cursor-pointer bg-white dark:bg-gray-700"
+                  onClick={() => togglePlatform(platform)}
+                >
+                  <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-2">
-                      {theme.icon}
-                      <h3 className={`text-sm font-semibold ${theme.textColor} tracking-wide`}>
+                      <svg className="w-4 h-4 text-black dark:text-gray-50 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={expanded.includes(platform) ? "M19 9l-7 7-7-7" : "M9 5l7 7-7 7"} />
+                      </svg>
+                      <h3 className="text-sm text-black dark:text-gray-50 tracking-wide">
                         {platform}
                       </h3>
                     </div>
                   </div>
-                );
-              })()}
-              
-              {/* Models in this platform */}
-              {groupedModels[platform].map((model) => (
-                <li
-                  key={model.id}
-                  onClick={() => {
-                    if (model.disabled) {
-                      setDialogVisible(true);
-                      return;
+                </div>
+                {/* Models in this platform */}
+                {expanded.includes(platform) && (
+                  <div>
+                    {enabledModels.map((model) => (
+                      <div
+                        key={model.id}
+                        onClick={() => handleModelSelect(model)}
+                        className={`pl-10 px-4 py-2.5 cursor-pointer text-sm transition-colors duration-150 hover:bg-purple-50 dark:hover:bg-gray-800 ${model.id === selected ? 'bg-purple-100 dark:bg-purple-900 border-l-2 border-purple-500' : ''}`}
+                      >
+                        <span className="text-gray-700 dark:text-gray-50">
+                          {model.name}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {/* Add separator between visible platforms (except for the last one) */}
+                {platformIndex < platformOrder.length - 1 && (
+                  (() => {
+                    // 判断后面是否还有可见platform
+                    const restVisible = platformOrder.slice(platformIndex + 1).some(p => groupedModels[p].filter(m => !m.disabled).length > 0);
+                    if (restVisible) {
+                      return <div className="h-px bg-gradient-to-r from-transparent via-gray-300 dark:via-gray-700 to-transparent mx-4"></div>;
                     }
-                    onSelect(model.id);
-                    setOpen(false);
-                  }}
-                  className={`px-4 py-2.5 cursor-pointer text-sm transition-colors duration-150 hover:bg-purple-50 dark:hover:bg-gray-600 ${model.disabled ? 'opacity-50 cursor-not-allowed' : ''} ${model.id === selected ? 'bg-purple-100 dark:bg-gray-600 border-l-2 border-purple-500' : ''}`}
-                >
-                  <span className={`${model.disabled ? 'text-gray-400 dark:text-gray-500' : 'text-gray-700 dark:text-gray-300'}`}>
-                    {model.name}
-                  </span>
-                </li>
-              ))}
-              
-              {/* Add separator between platforms (except for the last one) */}
-              {platformIndex < platformOrder.length - 1 && (
-                <div className="h-px bg-gradient-to-r from-transparent via-gray-300 dark:via-gray-500 to-transparent mx-4"></div>
-              )}
-            </div>
-          ))}
-        </ul>
+                    return null;
+                  })()
+                )}
+              </div>
+            );
+          })}
+        </div>
       )}
 
       {/* Info Dialog */}
@@ -138,10 +171,9 @@ export default function ModelDropdown({ models, selected, onSelect, disabled }: 
         confirmBtn="Got it"
         cancelBtn={null}
       >
-        Please visit <span className="font-semibold">EdgeOne Pages</span> to&nbsp;
+        Please go to <span className="font-semibold">EdgeOne Pages</span> to&nbsp;
         <a href="https://edgeone.ai/pages/new?from=template&template=image-generator-starter" target="_blank" className="text-blue-600 font-semibold">deploy</a>
-        &nbsp;your website and explore enhanced features (activation of the image generation functionality requires visiting&nbsp;
-        <a href="https://huggingface.co/models" target="_blank" className="text-blue-600 font-semibold">Hugging Face</a> and <a href="https://studio.nebius.com/?modality=text2image" target="_blank" className="text-blue-600 font-semibold">Nebius</a>).
+        &nbsp; your website and explore enhanced features (activate image generation features by going to the AI platform).
       </Dialog>
     </div>
   );

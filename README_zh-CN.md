@@ -69,6 +69,12 @@
    
    # Replicate API Token
    REPLICATE_TOKEN=your_replicate_token_here
+
+   # OPENAI API Key
+   OPENAI_API_KEY=your_openai_api_key_here   
+
+   # FAL API Key
+   FAL_KEY=your_fal_key_here
    ```
 
       EdgeOne Pages 部署控制台环境变量配置同上述 `.env` 文件保持一致。
@@ -107,6 +113,20 @@
 3. 进入 [Account Settings](https://replicate.com/account)
 4. 创建API令牌
 5. 复制令牌到 `REPLICATE_TOKEN` 环境变量
+
+#### OpenAI
+1. 访问 [OpenAI](https://platform.openai.com/)
+2. 注册并登录账户
+3. 进入 [API Keys](https://platform.openai.com/api-keys)
+4. 创建新的API密钥
+5. 复制密钥到 `OPENAI_API_KEY` 环境变量
+
+#### FAL
+1. 访问 [FAL](https://fal.ai/)
+2. 注册并登录账户
+3. 进入 [API Keys](https://fal.ai/app/apikeys)
+4. 创建API密钥
+5. 复制密钥到 `FAL_KEY` 环境变量
 
 ### 令牌状态检查
 
