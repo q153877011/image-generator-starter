@@ -24,14 +24,14 @@ const baseModels = [
   { id: 'blackschnell', name: 'black-forest-labs/flux-schnell', value: "black-forest-labs/flux-schnell", platform: 'Nebius' },
   { id: 'sdxl', name: 'stabilityai/stable-diffusion-xl-base-1.0', value: "stability-ai/sdxl",  platform: 'Nebius'},
   { id: 'blackdev', name: 'black-forest-labs/flux-dev', value: "black-forest-labs/flux-dev", platform: 'Nebius', disabled: true},
+  { id: 'google-imagen-4', name: 'google/imagen-4', value: "google/imagen-4", disabled: true, platform: 'Replicate'},
+  { id: 'fal-hidream-i1-full', name: 'FAL HiDream I1 Full', value: "fal-hidream-i1-full", platform: 'FAL'},
+  { id: 'fal-fast-sdxl', name: 'FAL Fast SDXL', value: "fal-fast-sdxl", platform: 'FAL'},
+  { id: 'dall-e-3', name: 'DALL-E 3', value: "dall-e-3", platform: 'OpenAI'},
   { id: 'pixelxl', name: 'nerijs/pixel-art-xl', value: "nerijs/pixel-art-xl", platform: 'Hugging Face', disabled: true},
   { id: 'hidreamfull1', name: 'HiDream-ai/HiDream-I1-Full', value: "HiDream-ai/HiDream-I1-Full", platform: 'Hugging Face', disabled: true},
   { id: 'btsd', name: 'ByteDance/Hyper-SD', value: "ByteDance/Hyper-SD", disabled: true, platform: 'Hugging Face' },
   { id: 'sdxl-turbo', name: 'stabilityai/sdxl-turbo', value: "stabilityai/sdxl-turbo", disabled: true, platform: 'Hugging Face'},
-  { id: 'google-imagen-4', name: 'google/imagen-4', value: "google/imagen-4", disabled: true, platform: 'Replicate'},
-  { id: 'dall-e-3', name: 'DALL-E 3', value: "dall-e-3", platform: 'OpenAI'},
-  { id: 'fal-hidream-i1-full', name: 'FAL HiDream I1 Full', value: "fal-hidream-i1-full", platform: 'FAL'},
-  { id: 'fal-fast-sdxl', name: 'FAL Fast SDXL', value: "fal-fast-sdxl", platform: 'FAL'},
 ];
 
 export default function Home() {
