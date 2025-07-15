@@ -51,13 +51,102 @@ async function replicate_query(data, url) {
 }
 
 /**
- * FAL API query function
+ * FAL API query function (for Hugging Face router)
  * @param {Object} data - Request data
  * @param {string} url - FAL API endpoint
  * @returns {Promise<Object>} API response
  */
 async function fal_query(data, url) {
   return apiQuery(data, env.HF_TOKEN, url);
+}
+
+/**
+ * FAL Queue API query function
+ * @param {Object} data - Request data
+ * @param {string} url - FAL Queue API endpoint
+ * @returns {Promise<Object>} API response with request_id
+ */
+async function fal_queue_query(data, url) {
+  const response = await PROVIDERS.fetch(url, {
+    headers: {
+      'Authorization': `Key ${env.FAL_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`FAL API request failed: ${response.status} ${response.statusText} - ${errorText}`);
+  }
+
+  const result = await response.json();
+  // Add the original URL to the result for polling
+  result._falUrl = url;
+  return result;
+}
+
+/**
+ * Poll FAL API for completion
+ * @param {string} requestId - Request ID from initial response
+ * @param {string} url - FAL API endpoint
+ * @returns {Promise<Object>} Final result with image data
+ */
+async function pollFalResult(requestId, url) {
+  const maxAttempts = 120; // 10 minutes with 5-second intervals
+  const interval = 2000; // 2 seconds
+  
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    try {
+      const response = await PROVIDERS.fetch(`${url}/${requestId}`, {
+        headers: {
+          'Authorization': `Key ${env.FAL_KEY}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`FAL polling failed: ${response.status} ${response.statusText} - ${errorText}`);
+      }
+      
+      const result = await response.json();
+      console.log(`FAL polling attempt ${attempt + 1}, status: ${result.status}`);
+      
+      if (result.status === 'completed') {
+        console.log('FAL API: Generation completed');
+        return result;
+      } else if (result.status === 'failed') {
+        throw new Error(`FAL generation failed: ${result.error || 'Unknown error'}`);
+      } else if (result.status === 'canceled') {
+        throw new Error('FAL generation was canceled');
+      }
+      
+      // Wait before next attempt
+      await new Promise(resolve => setTimeout(resolve, interval));
+      
+    } catch (error) {
+      console.error(`FAL polling error on attempt ${attempt + 1}:`, error);
+      if (attempt === maxAttempts - 1) {
+        throw error;
+      }
+      // Wait before retry
+      await new Promise(resolve => setTimeout(resolve, interval));
+    }
+  }
+  
+  throw new Error('FAL generation timed out after 10 minutes');
+}
+
+/**
+ * OpenAI API query function
+ * @param {Object} data - Request data
+ * @param {string} url - OpenAI API endpoint
+ * @returns {Promise<Object>} API response
+ */
+async function openai_query(data, url) {
+  return apiQuery(data, env.OPENAI_API_KEY, url);
 }
 
 /**
@@ -156,6 +245,25 @@ async function processApiResponse(result) {
     }
   }
 
+  // Handle FAL Queue API async response
+  if (result.request_id && result.status) {
+    console.log('Detected FAL Queue API response, status:', result.status);
+    // This is a FAL Queue API response, need to poll for completion
+    if (result.status === 'pending' || result.status === 'processing') {
+      console.log('FAL API: Polling for completion...');
+      // Use the URL stored in the result from fal_queue_query
+      const falUrl = result._falUrl || 'https://queue.fal.run/fal-ai/hidream-i1-full'; // fallback for backward compatibility
+      const finalResult = await pollFalResult(result.request_id, falUrl);
+      result = finalResult;
+      console.log('FAL polling completed successfully');
+    } else if (result.status === 'completed') {
+      // Already completed
+      console.log('FAL API: Already completed');
+    } else if (result.status === 'failed') {
+      throw new Error(`FAL generation failed: ${result.error || 'Unknown error'}`);
+    }
+  }
+
   // Handle Replicate API format (URL output)
   if (result.output && typeof result.output === 'string' && result.output.startsWith('http')) {
     console.log('Found Replicate API URL output');
@@ -206,6 +314,9 @@ export {
   nebius_query,
   replicate_query,
   fal_query,
+  fal_queue_query,
+  openai_query,
   pollReplicateResult,
+  pollFalResult,
   processApiResponse
 }; 

@@ -29,12 +29,15 @@ const baseModels = [
   { id: 'btsd', name: 'ByteDance/Hyper-SD', value: "ByteDance/Hyper-SD", disabled: true, platform: 'Hugging Face' },
   { id: 'sdxl-turbo', name: 'stabilityai/sdxl-turbo', value: "stabilityai/sdxl-turbo", disabled: true, platform: 'Hugging Face'},
   { id: 'google-imagen-4', name: 'google/imagen-4', value: "google/imagen-4", disabled: true, platform: 'Replicate'},
+  { id: 'dall-e-3', name: 'DALL-E 3', value: "dall-e-3", platform: 'OpenAI'},
+  { id: 'fal-hidream-i1-full', name: 'FAL HiDream I1 Full', value: "fal-hidream-i1-full", platform: 'FAL'},
+  { id: 'fal-fast-sdxl', name: 'FAL Fast SDXL', value: "fal-fast-sdxl", platform: 'FAL'},
 ];
 
 export default function Home() {
   const [inputValue, setInputValue] = useState('');
   const [generatedImages, setGeneratedImages] = useState<GeneratedImage[]>([]);
-  const [selectedModel, setSelectedModel] = useState<string>('');
+  const [selectedModel, setSelectedModel] = useState<string>('black-forest-labs/flux-schnell');
   const [isGenerating, setIsGenerating] = useState(false);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [isClient, setIsClient] = useState(false);
@@ -44,6 +47,8 @@ export default function Home() {
   const [hasHfToken, setHasHfToken] = useState<boolean>(false);
   const [hasNebiusToken, setHasNebiusToken] = useState<boolean>(false);
   const [hasReplicateToken, setHasReplicateToken] = useState<boolean>(false);
+  const [hasOpenaiToken, setHasOpenaiToken] = useState<boolean>(false);
+  const [hasFalToken, setHasFalToken] = useState<boolean>(false);
   const [imageLoadError, setImageLoadError] = useState<boolean>(false);
   const [imageLoading, setImageLoading] = useState<boolean>(false);
   const disabledList = ['sdxl', 'blackdev', 'pixelxl', 'hidreamfull1', 'btsd', 'sdxl-turbo'];
@@ -63,13 +68,15 @@ export default function Home() {
           return await res.json();
         } catch (err) {
           console.warn('token-status response is not valid JSON:', err);
-          return { hfToken: false, nebiusToken: false, replicateToken: false };
+          return { hfToken: false, nebiusToken: false, replicateToken: false, openaiToken: false, falToken: false };
         }
       })
-      .then((data: { hfToken?: boolean; nebiusToken?: boolean; replicateToken?: boolean }) => {
+      .then((data: { hfToken?: boolean; nebiusToken?: boolean; replicateToken?: boolean; openaiToken?: boolean; falToken?: boolean }) => {
         setHasHfToken(Boolean(data?.hfToken));
         setHasNebiusToken(Boolean(data?.nebiusToken));
         setHasReplicateToken(Boolean(data?.replicateToken));
+        setHasOpenaiToken(Boolean(data?.openaiToken));
+        setHasFalToken(Boolean(data?.falToken));
       })
       .catch((err) => {
         console.error('Failed to fetch token status:', err);
@@ -89,13 +96,19 @@ export default function Home() {
       if (m.platform === 'Replicate') {
         disabled = !hasReplicateToken;
       }
+      if (m.platform === 'OpenAI') {
+        disabled = !hasOpenaiToken;
+      }
+      if (m.platform === 'FAL') {
+        disabled = !hasFalToken;
+      }
       // Always disable if in disabledList
       if (disabledList.includes(m.id)) {
         disabled = true;
       }
       return { ...m, disabled };
     });
-  }, [hasHfToken, hasNebiusToken, hasReplicateToken]);
+  }, [hasHfToken, hasNebiusToken, hasReplicateToken, hasOpenaiToken, hasFalToken]);
 
   useEffect(() => {
     setIsClient(true);
@@ -108,6 +121,10 @@ export default function Home() {
       setDisplayPlatformName('Nebius');
     } else if (modelInfo?.platform === 'Replicate') {
       setDisplayPlatformName('Replicate');
+    } else if (modelInfo?.platform === 'OpenAI') {
+      setDisplayPlatformName('OpenAI');
+    } else if (modelInfo?.platform === 'FAL') {
+      setDisplayPlatformName('FAL');
     } else {
       setDisplayPlatformName('Hugging Face');
     }
@@ -347,7 +364,7 @@ export default function Home() {
   const examplePrompts = [
     "A cute orange kitten playing in a garden",
     "A futuristic city night scene with neon lights", 
-    "A watercolor landscape painting of mountains and rivers",
+    "A surrealist scene of floating books in a starry night sky above a sleeping child",
   ];
 
   return (
@@ -423,7 +440,7 @@ export default function Home() {
                    <button
                      type="submit"
                      disabled={!inputValue.trim() || isGenerating || !selectedModel}
-                     className="px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 disabled:from-gray-300 disabled:to-gray-300 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-all duration-200 flex items-center space-x-2 shadow-lg hover:shadow-xl self-start"
+                     className="px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 hover:cursor-pointer disabled:from-gray-300 disabled:to-gray-300 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-all duration-200 flex items-center space-x-2 shadow-lg hover:shadow-xl self-start"
                    >
                      {isGenerating ? (
                        <>
@@ -452,7 +469,7 @@ export default function Home() {
                      <button
                        key={index}
                        onClick={() => setInputValue(prompt)}
-                       className="p-3 text-left text-sm bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg hover:border-purple-300 dark:hover:border-purple-600 hover:bg-purple-50 dark:hover:bg-gray-600 transition-all duration-200 text-gray-700 dark:text-gray-300"
+                       className="cursor-pointer p-3 text-left text-sm bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg hover:border-purple-300 dark:hover:border-purple-600 hover:bg-purple-50 dark:hover:bg-gray-600 transition-all duration-200 text-gray-700 dark:text-gray-300"
                      >
                        {prompt}
                      </button>

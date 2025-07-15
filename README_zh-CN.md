@@ -8,6 +8,10 @@
 
 一个现代化的AI图像生成Web应用，支持多个AI平台，提供实时图像生成、下载和管理功能。
 
+## 🚀 部署
+
+部署到腾讯云 EdgeOne Pages。
+
 [![EdgeOne Pages deploy](https://cdnstatic.tencentcs.com/edgeone/pages/deploy.svg)](https://console.cloud.tencent.com/edgeone/pages/new?template=ai-image-generator-template)
 
 ## ✨ 功能特性

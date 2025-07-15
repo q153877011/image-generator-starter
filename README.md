@@ -8,6 +8,10 @@
 
 A modern AI image generation web application that supports multiple AI platforms, providing real-time image generation, download, and management features.
 
+## Deploy
+
+Deploy with EdgeOne Pages.
+
 [![EdgeOne Pages deploy](https://cdnstatic.tencentcs.com/edgeone/pages/deploy.svg)](https://edgeone.ai/pages/new?template=ai-image-generator-template)
 
 ## ✨ Features
