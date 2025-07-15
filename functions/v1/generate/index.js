@@ -91,14 +91,6 @@ export async function onRequest({ request, params, env }) {
           model,
         }, 'https://api.studio.nebius.com/v1/images/generations');
       },
-      'black-forest-labs/flux-dev': () => {
-        validateToken('nebius');
-        return nebius_query({
-          response_format: 'b64_json',
-          prompt,
-          model,
-        }, 'https://api.studio.nebius.com/v1/images/generations');
-      },
       'stability-ai/sdxl': () => {
         validateToken('nebius');
         return nebius_query({
@@ -134,6 +126,23 @@ export async function onRequest({ request, params, env }) {
         return replicate_query({
           input: { prompt },
         }, 'https://api.replicate.com/v1/models/google/imagen-4/predictions');
+      },
+      'flux-1.1-pro': () => {
+        validateToken('replicate');
+        return replicate_query({
+          input: { prompt },
+        }, 'https://api.replicate.com/v1/models/black-forest-labs/flux-1.1-pro/predictions');
+      },
+      'dall-e-2': () => {
+        validateToken('openai');
+        return openai_query({
+          model: "dall-e-2",
+          prompt: prompt,
+          n: 1,
+          size: "1024x1024",
+          quality: "standard",
+          response_format: "b64_json"
+        }, 'https://api.openai.com/v1/images/generations');
       },
       'dall-e-3': () => {
         validateToken('openai');
