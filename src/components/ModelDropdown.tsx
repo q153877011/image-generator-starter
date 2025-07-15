@@ -119,14 +119,6 @@ export default function ModelDropdown({ models, selected, onSelect, disabled }: 
                       {platform}
                     </h3>
                   </div>
-                  <svg
-                    className={`w-4 h-4 text-gray-400 dark:text-gray-300 transition-transform ${expanded.includes(platform) ? 'rotate-90' : ''}`}
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
                 </div>
               </div>
               
@@ -135,7 +127,7 @@ export default function ModelDropdown({ models, selected, onSelect, disabled }: 
                 <div>
                   {groupedModels[platform].map((model) => (
                     model.disabled ? (
-                      <Tooltip key={model.id} content={<div className='text-sm/4'>Please enter your own {model.name} token to enable this model</div>} placement="top" theme="light">
+                      <Tooltip overlayStyle={{maxWidth: '350px'}} key={model.id} content={<div className='text-sm pb-2 pt-2 pl-2'>Please enter your own {model.name} token to enable this model</div>} placement="top" theme="light">
                         <div
                           onClick={() => handleModelSelect(model)}
                           className={`pl-10 px-4 py-2.5 text-sm transition-colors duration-150 hover:bg-purple-50 dark:hover:bg-gray-700 opacity-50 cursor-not-allowed ${model.id === selected ? 'bg-purple-100 dark:bg-gray-700 border-l-2 border-purple-500' : ''}`}
