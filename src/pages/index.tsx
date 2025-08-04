@@ -23,14 +23,14 @@ const platform = {
 const baseModels = [
   { id: 'blackschnell', name: 'black-forest-labs/flux-schnell', value: "black-forest-labs/flux-schnell", platform: 'Nebius' },
   { id: 'sdxl', name: 'stabilityai/stable-diffusion-xl-base-1.0', value: "stability-ai/sdxl",  platform: 'Nebius'},
-  { id: 'google-imagen-4', name: 'google/imagen-4', value: "google/imagen-4", disabled: true, platform: 'Replicate'},
-  { id: 'flux-1-1-pro', name: 'flux-1.1-pro', value: "flux-1.1-pro", disabled: true, platform: 'Replicate'},
+  { id: 'google-imagen-4', name: 'google/imagen-4', value: "google/imagen-4", platform: 'Replicate'},
+  { id: 'flux-1-1-pro', name: 'flux-1.1-pro', value: "flux-1.1-pro", platform: 'Replicate'},
   { id: 'fal-hidream-i1-full', name: 'FAL HiDream I1 Full', value: "fal-hidream-i1-full", platform: 'FAL'},
   { id: 'fal-fast-sdxl', name: 'FAL Fast SDXL', value: "fal-fast-sdxl", platform: 'FAL'},
   { id: 'dall-e-2', name: 'DALL-E 2', value: "dall-e-2", platform: 'OpenAI'},
   { id: 'dall-e-3', name: 'DALL-E 3', value: "dall-e-3", platform: 'OpenAI'},
-  { id: 'pixelxl', name: 'nerijs/pixel-art-xl', value: "nerijs/pixel-art-xl", platform: 'Hugging Face', disabled: true},
-  { id: 'hidreamfull1', name: 'HiDream-ai/HiDream-I1-Full', value: "HiDream-ai/HiDream-I1-Full", platform: 'Hugging Face', disabled: true},
+  { id: 'pixelxl', name: 'nerijs/pixel-art-xl', value: "nerijs/pixel-art-xl", platform: 'Hugging Face'},
+  { id: 'hidreamfull1', name: 'HiDream-ai/HiDream-I1-Full', value: "HiDream-ai/HiDream-I1-Full", platform: 'Hugging Face'},
 ];
 
 export default function Home() {
