@@ -50,7 +50,7 @@ export default function Home() {
   const [hasFalToken, setHasFalToken] = useState<boolean>(false);
   const [imageLoadError, setImageLoadError] = useState<boolean>(false);
   const [imageLoading, setImageLoading] = useState<boolean>(false);
-  const disabledList = ['sdxl', 'blackdev', 'pixelxl', 'hidreamfull1', 'btsd', 'sdxl-turbo'];
+  // const disabledList = ['sdxl', 'blackdev', 'pixelxl', 'hidreamfull1', 'btsd', 'sdxl-turbo'];
 
   // Fetch token presence once on mount
   useEffect(() => {
@@ -71,6 +71,7 @@ export default function Home() {
         }
       })
       .then((data: { hfToken?: boolean; nebiusToken?: boolean; replicateToken?: boolean; openaiToken?: boolean; falToken?: boolean }) => {
+        console.log(data)
         setHasHfToken(Boolean(data?.hfToken));
         setHasNebiusToken(Boolean(data?.nebiusToken));
         setHasReplicateToken(Boolean(data?.replicateToken));
@@ -102,9 +103,9 @@ export default function Home() {
         disabled = !hasFalToken;
       }
       // Always disable if in disabledList
-      if (disabledList.includes(m.id)) {
-        disabled = true;
-      }
+      // if (disabledList.includes(m.id)) {
+      //   disabled = true;
+      // }
       return { ...m, disabled };
     });
   }, [hasHfToken, hasNebiusToken, hasReplicateToken, hasOpenaiToken, hasFalToken]);

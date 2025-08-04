@@ -37,7 +37,6 @@ export default function ModelDropdown({ models, selected, onSelect, disabled }: 
     }, {} as Record<string, ModelOption[]>);
 
     const order = Array.from(new Set(models.map(m => m.platform || 'Other')));
-    
     return { groupedModels: grouped, platformOrder: order };
   }, [models]);
 
