@@ -153,7 +153,7 @@ const ImageDisplay: React.FC<ImageDisplayProps> = ({
                 </div>
                 
                 {/* Footer / Info Section */}
-                <div className="px-4 py-3 bg-gray-50 dark:bg-gray-700 border-t border-gray-200 dark:border-gray-600">
+                <div className="px-4 py-3 bg-gray-50 dark:bg-gray-700 border-t border-gray-200 dark:border-gray-600 rounded-b-xl">
                   <h4 className="text-sm font-medium text-gray-900 dark:text-white">
                     {generatedImages[0]?.platform || 'Hugging Face'}
                   </h4>
