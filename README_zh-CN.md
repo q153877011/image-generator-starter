@@ -4,7 +4,7 @@
 [![React](https://img.shields.io/badge/React-19.0.0-blue)](https://reactjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue)](https://www.typescriptlang.org/)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4.0-38B2AC)](https://tailwindcss.com/)
-[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![License](https://img.shields.io/badge/License-MIT-green.svg)](https://github.com/github/choosealicense.com/blob/gh-pages/_licenses/mit.txt)
 
 一个现代化的AI图像生成Web应用，支持多个AI平台，提供实时图像生成、下载和管理功能。
 
@@ -124,7 +124,7 @@
 #### FAL
 1. 访问 [FAL](https://fal.ai/)
 2. 注册并登录账户
-3. 进入 [API Keys](https://fal.ai/app/apikeys)
+3. 进入 [API Keys](https://fal.ai/dashboard/keys)
 4. 创建API密钥
 5. 复制密钥到 `FAL_KEY` 环境变量
 
