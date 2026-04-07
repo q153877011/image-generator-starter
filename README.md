@@ -124,7 +124,7 @@ Deploy with EdgeOne Pages.
 #### FAL
 1. Visit [FAL](https://fal.ai/)
 2. Register and login to your account
-3. Go to [API Keys](https://fal.ai/app/apikeys)
+3. Go to [API Keys](https://fal.ai/dashboard/keys)
 4. Create an API key
 5. Copy the key to the `FAL_KEY` environment variable
 
